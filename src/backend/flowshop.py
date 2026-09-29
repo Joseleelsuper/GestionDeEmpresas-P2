@@ -32,6 +32,7 @@ def calculate_flowshop(processing: list[list[int]], sequence: list[int]) -> dict
 
     completion_times = [row["completion"][-1] for row in rows]
     cmax = max(completion_times)
+    
     return {
         "jobs": len(processing),
         "machines": machine_count,

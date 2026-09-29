@@ -56,4 +56,5 @@ async def solve_instance(
         order = parse_sequence(sequence, len(processing))
     except ValueError as error:
         raise HTTPException(400, str(error)) from None
+    
     return {"source": source, **calculate_flowshop(processing, order)}

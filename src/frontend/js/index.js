@@ -102,9 +102,9 @@ form.addEventListener("submit", async (event) => {
     document.querySelector("#result-sequence").textContent = result.sequence.join(", ");
     document.querySelector("#metric-cmax").textContent = result.cmax;
     document.querySelector("#metric-fmax").textContent = result.fmax;
-    renderTable(document.querySelector("#completion-table"), result.rows, "completion", result.machines);
-    const originalRows = [...result.rows].sort((first, second) => first.job - second.job);
-    renderTable(document.querySelector("#processing-table"), originalRows, "processing", result.machines);
+    const orderedRows = [...result.rows].sort((first, second) => first.job - second.job);
+    renderTable(document.querySelector("#completion-table"), orderedRows, "completion", result.machines);
+    renderTable(document.querySelector("#processing-table"), orderedRows, "processing", result.machines);
     sequenceInput.value = result.sequence.join(", ");
     results.hidden = false;
     setStatus("");

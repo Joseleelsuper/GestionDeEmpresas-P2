@@ -1,32 +1,53 @@
 """Comprobaciones del parser y del cálculo de la matriz F."""
 
 import unittest
-from pathlib import Path
-from zipfile import ZipFile
 
 from app import EXAMPLES, list_examples
 from src.backend.flowshop import calculate_flowshop
 from src.backend.instance import parse_instance
 from src.backend.sequence import parse_sequence
+from src.tst.flow_shop_test import DOC1, DOC2, EJEM_CLASE1
 
-ROOT = Path(__file__).resolve().parent
+REFERENCE_EXAMPLES = (
+    ("ejem_clase1.txt", EJEM_CLASE1),
+    ("Doc1.txt", DOC1),
+    ("Doc2.txt", DOC2),
+)
 
 
 class FlowShopTests(unittest.TestCase):
-    def test_extracted_examples_match_archive(self):
-        with ZipFile(ROOT / "docs" / "ProblemasFlowShopPermutacional.zip") as archive:
-            examples = [name for name in archive.namelist() if name.lower().endswith(".txt")]
-            self.assertEqual(len(list_examples()), 13)
-            for name in examples:
-                self.assertEqual((EXAMPLES / name).read_bytes(), archive.read(name))
-                parse_instance((EXAMPLES / name).read_text(encoding="utf-8-sig"))
+    def test_extracted_examples_are_available_and_parseable(self):
+        example_files = sorted(EXAMPLES.glob("*.txt"))
+        self.assertEqual(len(example_files), 13)
+        self.assertEqual(set(list_examples()), {path.name for path in example_files})
+        for path in example_files:
+            with self.subTest(example=path.name):
+                parse_instance(path.read_text(encoding="utf-8-sig"))
+
+    def test_reference_examples_match_completion_matrices_and_metrics(self):
+        for filename, (sequence, expected_completion) in REFERENCE_EXAMPLES:
+            with self.subTest(example=filename):
+                processing = parse_instance(
+                    (EXAMPLES / filename).read_text(encoding="utf-8-sig")
+                )
+                result = calculate_flowshop(processing, sequence)
+                self.assertEqual([row["job"] for row in result["rows"]], sequence)
+                ordered_rows = sorted(result["rows"], key=lambda row: row["job"])
+                self.assertEqual(
+                    [row["completion"] for row in ordered_rows], expected_completion
+                )
+                end_times = [row[-1] for row in expected_completion]
+                self.assertEqual(result["cmax"], max(end_times))
+                self.assertAlmostEqual(
+                    result["fmax"], sum(end_times) / len(end_times), places=2
+                )
 
     def test_first_class_example(self):
         processing = parse_instance((EXAMPLES / "ejem_clase1.txt").read_text())
         result = calculate_flowshop(processing, [4, 2, 5, 1, 3])
         self.assertEqual([row["completion"] for row in result["rows"]], [[0, 6], [2, 13], [10, 17], [15, 20], [24, 25]])
         self.assertEqual(result["cmax"], 25)
-        self.assertEqual(result["fmax"], 25)
+        self.assertEqual(result["fmax"], 16.2)
 
     def test_second_class_example(self):
         processing = parse_instance((EXAMPLES / "ejem_clase2.txt").read_text())

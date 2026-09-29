@@ -4,7 +4,7 @@ const fileInput = document.querySelector("#instance-file");
 const sequenceInput = document.querySelector("#sequence-input");
 const calculateButton = document.querySelector("#calculate");
 const randomizeButton = document.querySelector("#randomize");
-const status = document.querySelector("#status");
+const statusElement = document.querySelector("#status");
 const results = document.querySelector("#results");
 const emptyState = document.querySelector("#empty-state");
 const numberFormat = new Intl.NumberFormat("es-ES", { maximumFractionDigits: 2 });
@@ -28,9 +28,9 @@ async function loadExamples() {
 }
 
 function setStatus(message, isError = false) {
-  status.textContent = message;
-  status.classList.toggle("status-error", isError);
-  status.hidden = !isError || !message;
+  statusElement.textContent = message;
+  statusElement.classList.toggle("status-error", isError);
+  statusElement.hidden = !isError || !message;
 }
 
 function renderTable(container, rows, key, machines) {
@@ -103,7 +103,6 @@ form.addEventListener("submit", async (event) => {
     document.querySelector("#result-sequence").textContent = result.sequence.join(", ");
     document.querySelector("#metric-cmax").textContent = result.cmax;
     document.querySelector("#metric-fmax").textContent = result.fmax;
-    document.querySelector("#metric-fmed").textContent = numberFormat.format(result.fmed);
     renderTable(document.querySelector("#completion-table"), result.rows, "completion", result.machines);
     const originalRows = [...result.rows].sort((first, second) => first.job - second.job);
     renderTable(document.querySelector("#processing-table"), originalRows, "processing", result.machines);

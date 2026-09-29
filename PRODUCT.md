@@ -24,7 +24,7 @@ Course material supplies TXT instances; students may also upload a compatible TX
 
 ## Capabilities and Constraints
 
-Use permutation flow shop data with all jobs released at time zero. Show the completion matrix F, Cmax, Fmax, and Fmed. User uploads are temporary. Do not search for an optimal sequence or draw a Gantt chart.
+Use permutation flow shop data with all jobs released at time zero. Show the completion matrix F, Cmax, Fmax. User uploads are temporary. Do not search for an optimal sequence or draw a Gantt chart.
 
 ## Evidence on Hand
 

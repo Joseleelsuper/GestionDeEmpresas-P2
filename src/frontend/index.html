@@ -42,22 +42,17 @@
 
             <button class="button button-primary" id="calculate" type="submit">Calcular matriz F <span aria-hidden="true">→</span></button>
           </form>
-          <p class="status" id="status" role="status" aria-live="polite" hidden></p>
+          <output class="status" id="status" hidden></output>
 
           <details class="method-note">
             <summary>Cómo se calcula F</summary>
             <p>Una operación espera a que termine la anterior de su orden y a que su máquina quede libre:</p>
-            <p class="formula">F[k,j] = max(F[k−1,j], F[k,j−1]) + d[k,j]</p>
-            <p>Los tiempos de llegada son cero. Cmáx y Fmáx son el mayor tiempo de finalización; Fmed es su promedio en la última máquina.</p>
+            <p class="formula">F[k,j] = max(F[k-1,j], F[k,j-1]) + d[k,j]</p>
+            <p>Los tiempos de llegada son cero. Cmáx es el mayor tiempo de finalización y Fmáx es el promedio de la última columna.</p>
           </details>
         </section>
 
         <section class="output" aria-labelledby="result-title">
-          <div class="empty-state" id="empty-state">
-            <span class="empty-mark" aria-hidden="true">F<sub>ij</sub></span>
-            <h2>La matriz aparece aquí.</h2>
-            <p>Selecciona un ejemplo o carga un archivo para empezar.</p>
-          </div>
 
           <div id="results" hidden>
             <div class="result-heading">
@@ -69,9 +64,8 @@
             </div>
 
             <dl class="metrics" aria-label="Medidas de eficiencia">
-              <div><dt>Cmáx</dt><dd id="metric-cmax">—</dd><small>fin de la última orden</small></div>
-              <div><dt>Fmáx</dt><dd id="metric-fmax">—</dd><small>permanencia máxima</small></div>
-              <div><dt>Fmed</dt><dd id="metric-fmed">—</dd><small>permanencia media</small></div>
+              <div><dt>Cmáx</dt><dd id="metric-cmax">—</dd><small>Fin de la última orden</small></div>
+              <div><dt>Fmáx</dt><dd id="metric-fmax">—</dd><small>Permanencia media</small></div>
             </dl>
 
             <div class="table-section">
@@ -86,6 +80,6 @@
         </section>
       </div>
     </main>
-    <footer class="page-footer"><a href="https://joseleelportfolio.vercel.app">José Gallardo Caballero</a></footer>
+    <footer class="page-footer"><a href="https://joseleelportfolio.vercel.app" target="_blank" rel="noopener noreferrer">José Gallardo Caballero</a></footer>
   </body>
 </html>

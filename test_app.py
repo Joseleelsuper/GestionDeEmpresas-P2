@@ -27,7 +27,6 @@ class FlowShopTests(unittest.TestCase):
         self.assertEqual([row["completion"] for row in result["rows"]], [[0, 6], [2, 13], [10, 17], [15, 20], [24, 25]])
         self.assertEqual(result["cmax"], 25)
         self.assertEqual(result["fmax"], 25)
-        self.assertEqual(result["fmed"], 16.2)
 
     def test_second_class_example(self):
         processing = parse_instance((EXAMPLES / "ejem_clase2.txt").read_text())

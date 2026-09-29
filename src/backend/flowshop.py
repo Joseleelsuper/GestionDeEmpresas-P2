@@ -13,7 +13,7 @@ def calculate_flowshop(processing: list[list[int]], sequence: list[int]) -> dict
         sequence (list[int]): Permutación completa de identificadores desde 1.
 
     Returns:
-        dict: Filas de duraciones y finalización, Cmáx, Fmáx y Fmed.
+        dict: Filas de duraciones y finalización, Cmáx y Fmáx.
     """
     machine_count = len(processing[0])
     rows = []
@@ -35,6 +35,5 @@ def calculate_flowshop(processing: list[list[int]], sequence: list[int]) -> dict
         "sequence": sequence,
         "rows": rows,
         "cmax": cmax,
-        "fmax": max(completion_times),
-        "fmed": sum(completion_times) / len(completion_times),
+        "fmax": sum(completion_times) / len(completion_times)
     }

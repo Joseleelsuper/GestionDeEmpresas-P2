@@ -1,85 +1,96 @@
 <!doctype html>
 <html lang="es">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#18342c">
-    <title>Flow shop permutacional</title>
-    <base href="/static/">
-    <link rel="stylesheet" href="css/global.css">
-    <link rel="stylesheet" href="css/pages/index.css">
-    <script src="js/index.js" defer></script>
-  </head>
-  <body>
-    <header class="site-header">
-      <a class="brand" href="/" aria-label="Flow shop, inicio">
-        <span class="brand-mark" aria-hidden="true">F</span>
-        <span>Flow shop <span class="brand-light">permutacional</span></span>
-      </a>
-      <span class="course-name">Gestión y Organización de Empresas</span>
-    </header>
 
-    <main class="page-shell">
-      <div class="workspace">
-        <section class="controls" aria-labelledby="input-title">
-          <h2 id="input-title">Datos de entrada</h2>
-          <form id="solve-form">
-            <label for="example-select">Ejemplo</label>
-            <select id="example-select" name="example">
-              <option value="">Cargando ejemplos…</option>
-            </select>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#18342c">
+  <title>Flow shop permutacional</title>
+  <base href="/static/">
+  <link rel="stylesheet" href="css/global.css">
+  <link rel="stylesheet" href="css/pages/index.css">
+  <script src="js/index.js" defer></script>
+</head>
 
-            <label for="instance-file">O carga tu propio TXT</label>
-            <input id="instance-file" name="file" type="file" accept=".txt,text/plain">
-            <p class="field-help">Formato: primera línea <code>n m</code>; después, máquina y duración de cada operación.</p>
+<body>
+  <header class="site-header">
+    <span class="course-name">Gestión y Organización de Empresas</span>
+  </header>
 
-            <label for="sequence-input">Secuencia de órdenes</label>
-            <div class="sequence-control">
-              <input id="sequence-input" name="sequence" type="text" inputmode="numeric" autocomplete="off" placeholder="4, 2, 5, 1, 3" aria-describedby="sequence-help">
-              <button class="button button-quiet" id="randomize" type="button">Aleatoria</button>
-            </div>
-            <p class="field-help" id="sequence-help">Incluye cada orden una vez; sepáralas con espacios o comas. Vacío genera una permutación.</p>
+  <main class="page-shell">
+    <div class="workspace">
+      <section class="controls" aria-labelledby="input-title">
+        <h2 id="input-title">Datos de entrada</h2>
+        <form id="solve-form">
+          <label for="example-select">Ejemplo</label>
+          <select id="example-select" name="example">
+            <option value="">Cargando ejemplos…</option>
+          </select>
 
-            <button class="button button-primary" id="calculate" type="submit">Calcular matriz F <span aria-hidden="true">→</span></button>
-          </form>
-          <output class="status" id="status" hidden></output>
+          <label for="instance-file">O carga tu propio TXT</label>
+          <input id="instance-file" name="file" type="file" accept=".txt,text/plain">
+          <p class="field-help">Formato: primera línea <code>n m</code>; después, máquina y duración de cada operación.
+          </p>
 
-          <details class="method-note">
-            <summary>Cómo se calcula F</summary>
-            <p>Una operación espera a que termine la anterior de su orden y a que su máquina quede libre:</p>
-            <p class="formula">F[k,j] = max(F[k-1,j], F[k,j-1]) + d[k,j]</p>
-            <p>Los tiempos de llegada son cero. Cmáx es el mayor tiempo de finalización y Fmáx es el promedio de la última columna.</p>
-          </details>
-        </section>
-
-        <section class="output" aria-labelledby="result-title">
-
-          <div id="results" hidden>
-            <div class="result-heading">
-              <div>
-                <h2 id="result-title">Tiempos de finalización</h2>
-                <p class="result-caption" id="result-source"></p>
-              </div>
-              <p class="sequence-result">Secuencia <strong id="result-sequence"></strong></p>
-            </div>
-
-            <dl class="metrics" aria-label="Medidas de eficiencia">
-              <div><dt>Cmáx</dt><dd id="metric-cmax">—</dd><small>Fin de la última orden</small></div>
-              <div><dt>Fmáx</dt><dd id="metric-fmax">—</dd><small>Permanencia media</small></div>
-            </dl>
-
-            <div class="table-section">
-              <h3>Matriz F</h3>
-              <div class="table-scroll" id="completion-table"></div>
-            </div>
-            <details class="table-section processing-section">
-              <summary>Matriz de duraciones</summary>
-              <div class="table-scroll" id="processing-table"></div>
-            </details>
+          <label for="sequence-input">Secuencia de órdenes</label>
+          <div class="sequence-control">
+            <input id="sequence-input" name="sequence" type="text" inputmode="numeric" autocomplete="off"
+              placeholder="4, 2, 5, 1, 3" aria-describedby="sequence-help">
+            <button class="button button-quiet" id="randomize" type="button">Aleatoria</button>
           </div>
-        </section>
-      </div>
-    </main>
-    <footer class="page-footer"><a href="https://joseleelportfolio.vercel.app" target="_blank" rel="noopener noreferrer">José Gallardo Caballero</a></footer>
-  </body>
+          <p class="field-help" id="sequence-help">Incluye cada orden una vez; sepáralas con espacios o comas. Vacío
+            genera una permutación.</p>
+
+          <button class="button button-primary" id="calculate" type="submit">Calcular matriz F <span
+              aria-hidden="true">→</span></button>
+        </form>
+        <output class="status" id="status" hidden></output>
+
+        <details class="method-note">
+          <summary>Cómo se calcula F</summary>
+          <p>Una operación espera a que termine la anterior de su orden y a que su máquina quede libre:</p>
+          <p class="formula">F[k,j] = max(F[k-1,j], F[k,j-1]) + d[k,j]</p>
+          <p>Los tiempos de llegada son cero. Cmáx es el mayor tiempo de finalización y Fmáx es el promedio de la última
+            columna.</p>
+        </details>
+      </section>
+
+      <section class="output" aria-labelledby="result-title">
+
+        <div id="results" hidden>
+          <div class="result-heading">
+            <div>
+              <h2 id="result-title">Tiempos de finalización</h2>
+              <p class="result-caption" id="result-source"></p>
+            </div>
+            <p class="sequence-result">Secuencia <strong id="result-sequence"></strong></p>
+          </div>
+
+          <dl class="metrics" aria-label="Medidas de eficiencia">
+            <div>
+              <dt>Cmáx</dt>
+              <dd id="metric-cmax">—</dd><small>Fin de la última orden</small>
+            </div>
+            <div>
+              <dt>Fmáx</dt>
+              <dd id="metric-fmax">—</dd><small>Permanencia media</small>
+            </div>
+          </dl>
+
+          <div class="table-section">
+            <h3>Matriz F</h3>
+            <div class="table-scroll" id="completion-table"></div>
+          </div>
+          <details class="table-section processing-section">
+            <summary>Matriz de duraciones</summary>
+            <div class="table-scroll" id="processing-table"></div>
+          </details>
+        </div>
+      </section>
+    </div>
+  </main>
+  <footer class="page-footer"><a href="https://joseleelportfolio.vercel.app" target="_blank"
+      rel="noopener noreferrer">José Gallardo Caballero</a></footer>
+</body>
+
 </html>

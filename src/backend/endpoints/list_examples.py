@@ -13,6 +13,7 @@ def get_example_names(examples_dir: Path) -> list[str]:
     Returns:
         list[str]: Nombres de los archivos TXT ordenados por su sufijo numérico.
     """
+
     def order_key(path: Path) -> tuple[str, int]:
         """Crea la clave de ordenación de un nombre de ejemplo.
 
@@ -25,4 +26,8 @@ def get_example_names(examples_dir: Path) -> list[str]:
         match = re.search(r"\d+", path.stem)
         return path.stem.rstrip("0123456789"), int(match.group()) if match else 0
 
-    return [path.name for path in sorted(examples_dir.glob("*.txt"), key=order_key) if path.is_file()]
+    return [
+        path.name
+        for path in sorted(examples_dir.glob("*.txt"), key=order_key)
+        if path.is_file()
+    ]

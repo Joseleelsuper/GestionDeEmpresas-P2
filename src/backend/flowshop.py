@@ -23,7 +23,10 @@ def calculate_flowshop(processing: list[list[int]], sequence: list[int]) -> dict
         durations = processing[job - 1]
         current = []
         for machine, duration in enumerate(durations):
-            current.append(max(previous[machine], current[machine - 1] if machine else 0) + duration)
+            current.append(
+                max(previous[machine], current[machine - 1] if machine else 0)
+                + duration
+            )
         rows.append({"job": job, "processing": durations, "completion": current})
         previous = current
 
@@ -35,5 +38,5 @@ def calculate_flowshop(processing: list[list[int]], sequence: list[int]) -> dict
         "sequence": sequence,
         "rows": rows,
         "cmax": cmax,
-        "fmax": sum(completion_times) / len(completion_times)
+        "fmax": round(sum(completion_times) / len(completion_times), 2),
     }

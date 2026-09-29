@@ -22,7 +22,11 @@ def parse_sequence(value: str, jobs: int) -> list[int]:
     try:
         sequence = [int(item) for item in re.split(r"[\s,]+", value.strip())]
     except ValueError:
-        raise ValueError("La secuencia solo puede contener números separados por espacios o comas.") from None
+        raise ValueError(
+            "La secuencia solo puede contener números separados por espacios o comas."
+        ) from None
     if len(sequence) != jobs or set(sequence) != set(range(1, jobs + 1)):
-        raise ValueError(f"La secuencia debe incluir una vez cada orden del 1 al {jobs}.")
+        raise ValueError(
+            f"La secuencia debe incluir una vez cada orden del 1 al {jobs}."
+        )
     return sequence

@@ -6,7 +6,6 @@ const calculateButton = document.querySelector("#calculate");
 const randomizeButton = document.querySelector("#randomize");
 const statusElement = document.querySelector("#status");
 const results = document.querySelector("#results");
-const emptyState = document.querySelector("#empty-state");
 const numberFormat = new Intl.NumberFormat("es-ES", { maximumFractionDigits: 2 });
 
 async function loadExamples() {
@@ -107,7 +106,6 @@ form.addEventListener("submit", async (event) => {
     const originalRows = [...result.rows].sort((first, second) => first.job - second.job);
     renderTable(document.querySelector("#processing-table"), originalRows, "processing", result.machines);
     sequenceInput.value = result.sequence.join(", ");
-    emptyState.hidden = true;
     results.hidden = false;
     setStatus("");
   } catch (error) {

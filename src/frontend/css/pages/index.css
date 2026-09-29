@@ -246,17 +246,17 @@ input::placeholder {
   border-bottom: 1px solid var(--rule);
 }
 
-.metrics > div {
+.metrics>div {
   min-width: 0;
   padding: 0.25rem 0.85rem;
   border-right: 1px solid var(--rule);
 }
 
-.metrics > div:first-child {
+.metrics>div:first-child {
   padding-left: 0;
 }
 
-.metrics > div:last-child {
+.metrics>div:last-child {
   border: 0;
 }
 
@@ -353,7 +353,7 @@ tbody tr:last-child td {
   border-bottom: 0;
 }
 
-tr > :last-child {
+tr> :last-child {
   border-right: 0;
 }
 
@@ -419,7 +419,7 @@ tr > :last-child {
     margin-left: 0.3rem;
   }
 
-  .metrics > div {
+  .metrics>div {
     padding: 0.2rem 0.45rem;
   }
 

@@ -1,8 +1,4 @@
-"""Reference examples for the flow-shop evaluator.
-
-The processing-time matrices (``d``) are loaded from the corresponding
-instance files by the test setup; these constants preserve the Octave
-expected values for comparison with ``evaluar(sol_actual, d)``.
+"""Ejemplos de la práctica de Flow Shop Scheduling.
 """
 
 EJEM_CLASE1 = (

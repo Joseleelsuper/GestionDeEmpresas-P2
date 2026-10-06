@@ -20,6 +20,7 @@ async def solve_instance(
     strategy: str = "best",
     neighborhood: str = "swap",
     max_iterations: int = 100,
+    max_neighbors: int = 100,
 ) -> dict:
     """Valida la fuente y calcula la matriz de finalización.
 
@@ -32,7 +33,8 @@ async def solve_instance(
         objective (str): Medida que minimiza la búsqueda local.
         strategy (str): Submodo de selección del vecino.
         neighborhood (str): Movimiento usado para formar el vecindario.
-        max_iterations (int): Máximo de mejoras aceptadas.
+        max_iterations (int): Máximo de exploraciones del vecindario.
+        max_neighbors (int): Vecinos evaluados por iteración; 0 recorre todos.
 
     Returns:
         dict: Datos de entrada, cálculo final y resumen opcional de búsqueda.
@@ -67,7 +69,13 @@ async def solve_instance(
         order = parse_sequence(sequence, len(processing))
         if algorithm == "local_search":
             result, search = local_search(
-                processing, order, objective, strategy, neighborhood, max_iterations
+                processing,
+                order,
+                objective,
+                strategy,
+                neighborhood,
+                max_iterations,
+                max_neighbors,
             )
             return {"source": source, **result, "search": search}
         if algorithm != "calculate":

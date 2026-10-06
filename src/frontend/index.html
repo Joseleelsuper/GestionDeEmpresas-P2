@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#18342c">
   <title>Flow shop permutacional</title>
+  <link rel="icon" href="./assets/icon.ico" type="image/x-icon">
   <base href="/static/">
   <link rel="stylesheet" href="css/global.css">
   <link rel="stylesheet" href="css/pages/index.css">
@@ -46,8 +47,8 @@
 
           <details class="search-options" id="search-options">
             <summary>Búsqueda local</summary>
-            <p class="field-help">Mejora la secuencia indicada (o una aleatoria) hasta llegar a un óptimo local o al
-              máximo de iteraciones. No garantiza el óptimo global.</p>
+            <p class="field-help">Mejora la secuencia indicada (o una aleatoria) para el objetivo elegido. Solo recorrer
+              todos los vecinos puede confirmar un óptimo local; ninguna opción garantiza el global.</p>
 
             <label for="search-objective">Función objetivo</label>
             <select id="search-objective" name="objective">
@@ -57,9 +58,9 @@
 
             <label for="search-strategy">Submodo</label>
             <select id="search-strategy" name="strategy">
-              <option value="best">Mejor vecino</option>
+              <option value="best">Mejor vecino evaluado</option>
               <option value="first">Primer vecino que mejora</option>
-              <option value="random">Aleatorio entre los que mejoran</option>
+              <option value="random">Aleatorio entre mejoras evaluadas</option>
             </select>
 
             <label for="search-neighborhood">Movimiento</label>
@@ -71,7 +72,12 @@
             <label for="max-iterations">Máximo de iteraciones</label>
             <input id="max-iterations" name="max_iterations" type="number" min="1" max="1000" step="1"
               value="100" required>
-            <p class="field-help">Cada iteración acepta una mejora; el límite permitido es de 1 a 1000.</p>
+            <p class="field-help">Máximo de exploraciones del vecindario: de 1 a 1000.</p>
+
+            <label for="max-neighbors">Vecinos por iteración</label>
+            <input id="max-neighbors" name="max_neighbors" type="number" min="0" max="1000" step="1"
+              value="100" aria-describedby="neighbors-help" required>
+            <p class="field-help" id="neighbors-help">Evalúa hasta ese número de movimientos; 0 recorre todos y puede tardar más.</p>
 
             <button class="button button-quiet search-button" id="search-button" type="submit"
               value="local_search">Buscar secuencia mejorada</button>

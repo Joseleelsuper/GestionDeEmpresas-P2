@@ -3,6 +3,7 @@ const exampleSelect = document.querySelector("#example-select");
 const fileInput = document.querySelector("#instance-file");
 const sequenceInput = document.querySelector("#sequence-input");
 const maxIterationsInput = document.querySelector("#max-iterations");
+const maxNeighborsInput = document.querySelector("#max-neighbors");
 const calculateButton = document.querySelector("#calculate");
 const searchButton = document.querySelector("#search-button");
 const randomizeButton = document.querySelector("#randomize");
@@ -13,9 +14,13 @@ const numberFormat = new Intl.NumberFormat("es-ES", { maximumFractionDigits: 2 }
 const searchNumberFormat = new Intl.NumberFormat("es-ES", { maximumFractionDigits: 4 });
 const searchLabels = {
   objective: { cmax: "Cmáx", fmax: "Fmáx" },
-  strategy: { best: "Mejor vecino", first: "Primer vecino que mejora", random: "Vecino aleatorio" },
+  strategy: { best: "Mejor vecino evaluado", first: "Primer vecino que mejora", random: "Vecino aleatorio" },
   neighborhood: { swap: "Intercambio", "2opt": "Inversión 2-opt" },
-  stopReason: { local_optimum: "no hay vecinos mejores", max_iterations: "límite de iteraciones" },
+  stopReason: {
+    local_optimum: "no hay vecinos mejores",
+    sample_no_improvement: "sin mejora en la muestra",
+    max_iterations: "límite de iteraciones",
+  },
 };
 
 async function loadExamples() {
@@ -89,12 +94,14 @@ randomizeButton.addEventListener("click", () => {
   form.requestSubmit();
 });
 
-maxIterationsInput.addEventListener("keydown", (event) => {
-  if (event.key === "Enter") {
-    event.preventDefault();
-    form.requestSubmit(searchButton);
-  }
-});
+for (const input of [maxIterationsInput, maxNeighborsInput]) {
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      form.requestSubmit(searchButton);
+    }
+  });
+}
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -116,8 +123,17 @@ form.addEventListener("submit", async (event) => {
       return;
     }
     data.set("max_iterations", String(iterations));
+    const neighborText = maxNeighborsInput.value.trim();
+    const neighbors = Number(maxNeighborsInput.value);
+    if (!neighborText || !Number.isInteger(neighbors) || neighbors < 0 || neighbors > 1000) {
+      setStatus("Los vecinos por iteración deben ser un entero entre 0 y 1000.", true);
+      maxNeighborsInput.focus();
+      return;
+    }
+    data.set("max_neighbors", String(neighbors));
   } else {
     data.set("max_iterations", "100");
+    data.set("max_neighbors", "100");
   }
   searchSummary.hidden = true;
 
@@ -137,7 +153,7 @@ form.addEventListener("submit", async (event) => {
     if (result.search) {
       const search = result.search;
       const valueLabel = searchLabels.objective[search.objective];
-      searchSummary.textContent = `Búsqueda local · ${searchLabels.strategy[search.strategy]} · ${searchLabels.neighborhood[search.neighborhood]} · ${valueLabel}: ${searchNumberFormat.format(search.initial_value)} → ${searchNumberFormat.format(search.final_value)} · ${search.iterations}/${search.max_iterations} iteraciones · parada: ${searchLabels.stopReason[search.stop_reason]}.`;
+      searchSummary.textContent = `Búsqueda local · ${searchLabels.strategy[search.strategy]} · ${searchLabels.neighborhood[search.neighborhood]} · ${valueLabel}: ${searchNumberFormat.format(search.initial_value)} → ${searchNumberFormat.format(search.final_value)} · ${search.iterations}/${search.max_iterations} iteraciones · ${search.neighbors_evaluated} vecinos evaluados · parada: ${searchLabels.stopReason[search.stop_reason]}.`;
       searchSummary.hidden = false;
     }
     const orderedRows = [...result.rows].sort((first, second) => first.job - second.job);

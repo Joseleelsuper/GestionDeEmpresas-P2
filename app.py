@@ -47,6 +47,7 @@ async def solve(
     strategy: str = Form(default="best"),
     neighborhood: str = Form(default="swap"),
     max_iterations: int = Form(default=100),
+    max_neighbors: int = Form(default=100),
 ) -> dict:
     """Calcula la matriz F o ejecuta búsqueda local para un ejemplo o TXT.
 
@@ -58,7 +59,8 @@ async def solve(
         objective (str): Medida que se minimiza durante la búsqueda.
         strategy (str): Submodo de búsqueda local.
         neighborhood (str): Movimiento que genera los vecinos.
-        max_iterations (int): Máximo de mejoras aceptadas.
+        max_iterations (int): Máximo de exploraciones del vecindario.
+        max_neighbors (int): Vecinos evaluados por iteración; 0 recorre todos.
 
     Returns:
         dict: Instancia, cálculo final y resumen opcional de búsqueda local.
@@ -76,4 +78,5 @@ async def solve(
         strategy,
         neighborhood,
         max_iterations,
+        max_neighbors,
     )

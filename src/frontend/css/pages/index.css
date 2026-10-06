@@ -77,7 +77,8 @@ label {
 
 select,
 input[type="text"],
-input[type="file"] {
+input[type="file"],
+input[type="number"] {
   width: 100%;
   min-height: 44px;
   padding: 0.55rem 0.65rem;
@@ -155,6 +156,7 @@ input::placeholder {
 }
 
 .status {
+  display: block;
   min-height: 1.5rem;
   margin: 0.65rem 0 0;
   color: var(--muted);
@@ -174,6 +176,7 @@ input::placeholder {
 }
 
 .method-note summary,
+.search-options summary,
 .processing-section summary {
   color: var(--ink);
   font-weight: 700;
@@ -182,6 +185,23 @@ input::placeholder {
 
 .method-note p {
   margin: 0.65rem 0 0;
+}
+
+.search-options {
+  margin-top: 1.2rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--rule);
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.search-options[open] summary {
+  margin-bottom: 0.65rem;
+}
+
+.search-options .search-button {
+  width: 100%;
+  margin-top: 0.85rem;
 }
 
 .formula {
@@ -221,6 +241,17 @@ input::placeholder {
   align-items: start;
   justify-content: space-between;
   gap: 1rem;
+}
+
+.search-summary {
+  margin-top: 0.9rem;
+  padding: 0.55rem 0.7rem;
+  display: block;
+  border: 1px solid var(--rule);
+  color: var(--ink);
+  background: #e8eee3;
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .sequence-result {

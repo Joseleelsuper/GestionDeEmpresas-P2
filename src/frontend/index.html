@@ -41,10 +41,43 @@
           <p class="field-help" id="sequence-help">Incluye cada orden una vez; sepáralas con espacios o comas. Vacío
             genera una permutación.</p>
 
-          <button class="button button-primary" id="calculate" type="submit">Calcular matriz F <span
+          <button class="button button-primary" id="calculate" type="submit" formnovalidate>Calcular matriz F <span
               aria-hidden="true">→</span></button>
+
+          <details class="search-options" id="search-options">
+            <summary>Búsqueda local</summary>
+            <p class="field-help">Mejora la secuencia indicada (o una aleatoria) hasta llegar a un óptimo local o al
+              máximo de iteraciones. No garantiza el óptimo global.</p>
+
+            <label for="search-objective">Función objetivo</label>
+            <select id="search-objective" name="objective">
+              <option value="cmax">Minimizar Cmáx</option>
+              <option value="fmax">Minimizar Fmáx</option>
+            </select>
+
+            <label for="search-strategy">Submodo</label>
+            <select id="search-strategy" name="strategy">
+              <option value="best">Mejor vecino</option>
+              <option value="first">Primer vecino que mejora</option>
+              <option value="random">Aleatorio entre los que mejoran</option>
+            </select>
+
+            <label for="search-neighborhood">Movimiento</label>
+            <select id="search-neighborhood" name="neighborhood">
+              <option value="swap">Intercambio (swap)</option>
+              <option value="2opt">Inversión (2-opt)</option>
+            </select>
+
+            <label for="max-iterations">Máximo de iteraciones</label>
+            <input id="max-iterations" name="max_iterations" type="number" min="1" max="1000" step="1"
+              value="100" required>
+            <p class="field-help">Cada iteración acepta una mejora; el límite permitido es de 1 a 1000.</p>
+
+            <button class="button button-quiet search-button" id="search-button" type="submit"
+              value="local_search">Buscar secuencia mejorada</button>
+          </details>
         </form>
-        <output class="status" id="status" hidden></output>
+        <output class="status" id="status" aria-live="polite" hidden></output>
 
         <details class="method-note">
           <summary>Cómo se calcula F</summary>
@@ -65,6 +98,7 @@
             </div>
             <p class="sequence-result">Secuencia <strong id="result-sequence"></strong></p>
           </div>
+          <output class="search-summary" id="search-summary" aria-live="polite" hidden></output>
 
           <dl class="metrics" aria-label="Medidas de eficiencia">
             <div>

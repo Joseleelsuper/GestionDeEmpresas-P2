@@ -45,7 +45,7 @@ async def solve_instance(
         source = example
 
     if len(content) > MAX_FILE_BYTES:
-        raise HTTPException(413, "El archivo supera el límite de 1 MB.")
+        raise HTTPException(413, f"El archivo supera el límite de {MAX_FILE_BYTES / (1024 * 1024)}MB.")
     try:
         text = content.decode("utf-8-sig")
     except UnicodeDecodeError:

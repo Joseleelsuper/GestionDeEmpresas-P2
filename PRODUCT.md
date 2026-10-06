@@ -16,7 +16,7 @@ Students working on the production programming exercise in Gestión y Organizaci
 
 ## Product Purpose
 
-Load a flow shop permutation instance, choose or generate an order sequence, and calculate its completion-time matrix and performance measures.
+Load a flow shop permutation instance, choose or generate an order sequence, calculate its completion-time matrix and performance measures, and optionally improve the sequence with local search.
 
 ## Operating Context
 
@@ -24,7 +24,7 @@ Course material supplies TXT instances; students may also upload a compatible TX
 
 ## Capabilities and Constraints
 
-Use permutation flow shop data with all jobs released at time zero. Show the completion matrix F, Cmax, Fmax. User uploads are temporary. Do not search for an optimal sequence or draw a Gantt chart.
+Use permutation flow shop data with all jobs released at time zero. Show the completion matrix F, Cmax, Fmax. Local search minimizes the selected measure with a bounded iteration count and stops when no improving neighbor remains or the limit is reached; it does not guarantee a global optimum. User uploads are temporary. Do not draw a Gantt chart.
 
 ## Evidence on Hand
 

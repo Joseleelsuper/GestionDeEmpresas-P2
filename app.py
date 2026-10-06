@@ -42,18 +42,38 @@ async def solve(
     example: str = Form(default=""),
     sequence: str = Form(default=""),
     file: UploadFile | None = File(default=None),
+    algorithm: str = Form(default="calculate"),
+    objective: str = Form(default="cmax"),
+    strategy: str = Form(default="best"),
+    neighborhood: str = Form(default="swap"),
+    max_iterations: int = Form(default=100),
 ) -> dict:
-    """Calcula la matriz F para un ejemplo o un TXT subido.
+    """Calcula la matriz F o ejecuta búsqueda local para un ejemplo o TXT.
 
     Args:
         example (str): Nombre de un ejemplo integrado, si no se sube archivo.
         sequence (str): Permutación opcional de órdenes desde 1.
         file (UploadFile | None): TXT temporal enviado por el usuario.
+        algorithm (str): Cálculo directo o búsqueda local.
+        objective (str): Medida que se minimiza durante la búsqueda.
+        strategy (str): Submodo de búsqueda local.
+        neighborhood (str): Movimiento que genera los vecinos.
+        max_iterations (int): Máximo de mejoras aceptadas.
 
     Returns:
-        dict: Instancia, secuencia, filas de cálculo y medidas de eficiencia.
+        dict: Instancia, cálculo final y resumen opcional de búsqueda local.
 
     Raises:
         HTTPException: Si la instancia, el archivo o la secuencia no son válidos.
     """
-    return await solve_instance(example, sequence, file, EXAMPLES)
+    return await solve_instance(
+        example,
+        sequence,
+        file,
+        EXAMPLES,
+        algorithm,
+        objective,
+        strategy,
+        neighborhood,
+        max_iterations,
+    )

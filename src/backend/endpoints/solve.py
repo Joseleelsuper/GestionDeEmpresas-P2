@@ -6,6 +6,7 @@ from fastapi import HTTPException, UploadFile
 
 from ..flowshop import calculate_flowshop
 from ..instance import MAX_FILE_BYTES, parse_instance
+from ..local_search import local_search
 from ..sequence import parse_sequence
 
 
@@ -14,6 +15,11 @@ async def solve_instance(
     sequence: str,
     file: UploadFile | None,
     examples_dir: Path,
+    algorithm: str = "calculate",
+    objective: str = "cmax",
+    strategy: str = "best",
+    neighborhood: str = "swap",
+    max_iterations: int = 100,
 ) -> dict:
     """Valida la fuente y calcula la matriz de finalización.
 
@@ -22,9 +28,14 @@ async def solve_instance(
         sequence (str): Permutación opcional de órdenes.
         file (UploadFile | None): TXT cargado temporalmente por el usuario.
         examples_dir (Path): Directorio de los ejemplos integrados.
+        algorithm (str): ``calculate`` para evaluar o ``local_search`` para buscar.
+        objective (str): Medida que minimiza la búsqueda local.
+        strategy (str): Submodo de selección del vecino.
+        neighborhood (str): Movimiento usado para formar el vecindario.
+        max_iterations (int): Máximo de mejoras aceptadas.
 
     Returns:
-        dict: Datos de entrada, secuencia, filas de cálculo y métricas.
+        dict: Datos de entrada, cálculo final y resumen opcional de búsqueda.
 
     Raises:
         HTTPException: Si la fuente, el archivo, la instancia o la secuencia son inválidos.
@@ -54,7 +65,14 @@ async def solve_instance(
     try:
         processing = parse_instance(text)
         order = parse_sequence(sequence, len(processing))
+        if algorithm == "local_search":
+            result, search = local_search(
+                processing, order, objective, strategy, neighborhood, max_iterations
+            )
+            return {"source": source, **result, "search": search}
+        if algorithm != "calculate":
+            raise ValueError("El algoritmo debe ser cálculo directo o búsqueda local.")
     except ValueError as error:
         raise HTTPException(400, str(error)) from None
-    
+
     return {"source": source, **calculate_flowshop(processing, order)}

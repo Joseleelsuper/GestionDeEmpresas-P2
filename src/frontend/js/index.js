@@ -320,13 +320,13 @@ function readLocalSearchParameters(data) {
 
 function addSearchToHistory(result) {
   const card = createHistoryCard(result);
-  searchHistoryList.scrollLeft = 0;
   searchHistory.hidden = false;
   const previousCards = [...searchHistoryList.children];
   const previousPositions = new Map(
     previousCards.map((previous) => [previous, previous.getBoundingClientRect().left]),
   );
   searchHistoryList.prepend(card);
+  searchHistoryList.scrollLeft = 0;
 
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   if (!reduceMotion && typeof card.animate === "function") {
@@ -357,7 +357,7 @@ fileInput.addEventListener("change", () => {
 
 randomizeButton.addEventListener("click", () => {
   sequenceInput.value = "";
-  form.requestSubmit();
+  calculateButton.click();
 });
 
 clearSearchHistory.addEventListener("click", () => {

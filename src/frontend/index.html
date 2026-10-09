@@ -8,6 +8,10 @@
   <title>Flow shop permutacional</title>
   <link rel="icon" href="./assets/icon.ico" type="image/x-icon">
   <base href="/static/">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined&icon_names=cycle,home&display=block"
+    rel="stylesheet">
   <link rel="stylesheet" href="css/global.css">
   <link rel="stylesheet" href="css/pages/index.css">
   <script src="js/index.js" defer></script>
@@ -46,9 +50,15 @@
               aria-hidden="true">→</span></button>
 
           <details class="search-options" id="search-options">
-            <summary>Búsqueda local</summary>
-            <p class="field-help">Mejora la secuencia indicada (o una aleatoria) para el objetivo elegido. Solo recorrer
-              todos los vecinos puede confirmar un óptimo local; ninguna opción garantiza el global.</p>
+            <summary>Métodos de búsqueda</summary>
+            <p class="field-help" id="search-method-help"></p>
+
+            <label for="search-algorithm">Algoritmo</label>
+            <select id="search-algorithm">
+              <option value="random_search">Búsqueda aleatoria</option>
+              <option value="local_search">Búsqueda local</option>
+              <option value="simulated_annealing">Recocido simulado</option>
+            </select>
 
             <label for="search-objective">Función objetivo</label>
             <select id="search-objective" name="objective">
@@ -56,31 +66,66 @@
               <option value="fmax">Minimizar Fmáx</option>
             </select>
 
-            <label for="search-strategy">Submodo</label>
-            <select id="search-strategy" name="strategy">
-              <option value="best">Mejor vecino evaluado</option>
-              <option value="first">Primer vecino que mejora</option>
-              <option value="random">Aleatorio entre mejoras evaluadas</option>
-            </select>
+            <div class="search-field-group" id="neighborhood-fields">
+              <label for="search-neighborhood">Movimiento</label>
+              <select id="search-neighborhood" name="neighborhood">
+                <option value="swap">Intercambio (swap)</option>
+                <option value="2opt">Inversión (2-opt)</option>
+              </select>
+            </div>
 
-            <label for="search-neighborhood">Movimiento</label>
-            <select id="search-neighborhood" name="neighborhood">
-              <option value="swap">Intercambio (swap)</option>
-              <option value="2opt">Inversión (2-opt)</option>
-            </select>
+            <div class="search-field-group" id="random-search-fields" hidden>
+              <label for="random-iterations">Número de iteraciones</label>
+              <input id="random-iterations" name="random_iterations" type="number" min="1" max="10000"
+                step="1" value="1000">
+              <p class="field-help">Genera una permutación aleatoria por iteración y conserva la mejor.</p>
+            </div>
 
-            <label for="max-iterations">Máximo de iteraciones</label>
-            <input id="max-iterations" name="max_iterations" type="number" min="1" max="1000" step="1"
-              value="100" required>
-            <p class="field-help">Máximo de exploraciones del vecindario: de 1 a 1000.</p>
+            <div class="search-field-group" id="annealing-fields" hidden>
+              <label for="initial-temperature">Temperatura inicial (T₀)</label>
+              <input id="initial-temperature" name="initial_temperature" type="number" min="0.000001"
+                step="any" value="1000">
 
-            <label for="max-neighbors">Vecinos por iteración</label>
-            <input id="max-neighbors" name="max_neighbors" type="number" min="0" max="1000" step="1"
-              value="100" aria-describedby="neighbors-help" required>
-            <p class="field-help" id="neighbors-help">Evalúa hasta ese número de movimientos; 0 recorre todos y puede tardar más.</p>
+              <label for="cooling-rate">Factor de enfriamiento (α)</label>
+              <input id="cooling-rate" name="cooling_rate" type="number" min="0.000001" max="0.999999"
+                step="any" value="0.9">
+
+              <label for="iterations-per-temperature">Iteraciones por temperatura L(T)</label>
+              <input id="iterations-per-temperature" name="iterations_per_temperature" type="number" min="1"
+                max="10000" step="1" value="50">
+
+              <label for="final-temperature">Temperatura final (Tf)</label>
+              <input id="final-temperature" name="final_temperature" type="number" min="0.000001"
+                step="any" value="1">
+              <p class="field-help" id="annealing-estimate" aria-live="polite"></p>
+
+              <label class="search-refinement" for="refine-with-local-search">
+                <input id="refine-with-local-search" name="refine_with_local_search" type="checkbox" checked>
+                <span>Refinar con búsqueda local</span>
+              </label>
+            </div>
+
+            <div class="search-field-group" id="local-search-fields">
+              <label for="search-strategy">Submodo</label>
+              <select id="search-strategy" name="strategy">
+                <option value="best">Mejor vecino evaluado</option>
+                <option value="first">Primer vecino que mejora</option>
+                <option value="random">Aleatorio entre mejoras evaluadas</option>
+              </select>
+
+              <label for="max-iterations">Máximo de iteraciones locales</label>
+              <input id="max-iterations" name="max_iterations" type="number" min="1" max="1000" step="1"
+                value="100">
+              <p class="field-help">Exploraciones del vecindario: de 1 a 1000.</p>
+
+              <label for="max-neighbors">Vecinos por iteración local</label>
+              <input id="max-neighbors" name="max_neighbors" type="number" min="0" max="1000" step="1"
+                value="100">
+              <p class="field-help" id="neighbors-help">Evalúa hasta ese número de movimientos; 0 recorre todos y puede tardar más.</p>
+            </div>
 
             <button class="button button-quiet search-button" id="search-button" type="submit"
-              value="local_search">Buscar secuencia mejorada</button>
+              value="search">Ejecutar búsqueda</button>
           </details>
         </form>
         <output class="status" id="status" aria-live="polite" hidden></output>
@@ -97,14 +142,31 @@
       <section class="output" aria-labelledby="result-title">
 
         <div id="results" hidden>
-          <div class="result-heading">
+          <div class="result-heading" id="result-heading">
             <div>
               <h2 id="result-title">Tiempos de finalización</h2>
               <p class="result-caption" id="result-source"></p>
             </div>
-            <p class="sequence-result">Secuencia <strong id="result-sequence"></strong></p>
+            <div class="sequence-result" id="sequence-result-block">
+              <span class="sequence-label">Secuencia</span>
+              <strong id="result-sequence"></strong>
+              <details class="sequence-details" id="sequence-details" hidden>
+                <summary id="sequence-details-summary"></summary>
+                <p id="full-result-sequence"></p>
+              </details>
+            </div>
           </div>
-          <output class="search-summary" id="search-summary" aria-live="polite" hidden></output>
+          <section class="search-history" id="search-history" aria-labelledby="search-history-title" hidden>
+            <div class="history-heading">
+              <h3 id="search-history-title">Historial de búsquedas</h3>
+              <button class="button button-quiet history-clear" id="clear-search-history" type="button">
+                Limpiar
+              </button>
+            </div>
+            <ul class="history-list" id="search-history-list"
+              aria-label="Búsquedas anteriores; las más recientes aparecen a la izquierda"></ul>
+          </section>
+          <output class="visually-hidden" id="search-announcement" aria-live="polite"></output>
 
           <dl class="metrics" aria-label="Medidas de eficiencia">
             <div>

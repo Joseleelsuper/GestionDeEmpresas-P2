@@ -9,8 +9,13 @@ MAX_ITERATIONS = 1000
 MAX_NEIGHBORS = 1000
 
 
-def _objective_value(processing: list[list[int]], sequence: list[int], objective: str) -> float:
-    """Evalúa el objetivo sin construir filas ni la matriz de finalización."""
+def _objective_value(
+    processing: list[list[int]],
+    sequence: list[int],
+    objective: str,
+    cutoff: float | None = None,
+) -> float | None:
+    """Evalúa el objetivo y descarta prefijos que ya no pueden mejorarlo."""
     machine_count = len(processing[0])
     previous = [0] * machine_count
     current = [0] * machine_count
@@ -23,6 +28,11 @@ def _objective_value(processing: list[list[int]], sequence: list[int], objective
             ) + duration
         previous, current = current, previous
         total_completion += previous[-1]
+        if cutoff is not None:
+            if objective == "cmax" and previous[-1] >= cutoff:
+                return None
+            if objective == "fmax" and total_completion >= cutoff * len(sequence):
+                return None
 
     if objective == "cmax":
         return previous[-1]
@@ -101,6 +111,13 @@ def local_search(
     current = list(sequence)
     current_value = _objective_value(processing, current, objective)
     initial_value = current_value
+    initial_metrics = {
+        "cmax": current_value if objective == "cmax" else _objective_value(processing, current, "cmax"),
+        "fmax": round(
+            current_value if objective == "fmax" else _objective_value(processing, current, "fmax"),
+            2,
+        ),
+    }
     total_neighbors = len(current) * (len(current) - 1) // 2
     full_neighborhood = max_neighbors == 0 or max_neighbors >= total_neighbors
     iterations = 0
@@ -119,9 +136,10 @@ def local_search(
             else:
                 current[first : second + 1] = reversed(current[first : second + 1])
 
-            candidate_value = _objective_value(processing, current, objective)
+            cutoff = selected_value if strategy == "best" else current_value
+            candidate_value = _objective_value(processing, current, objective, cutoff)
             neighbors_evaluated += 1
-            if candidate_value < current_value:
+            if candidate_value is not None and candidate_value < current_value:
                 improving_neighbors += 1
                 if strategy == "first":
                     selected_sequence = current.copy()
@@ -149,7 +167,9 @@ def local_search(
         current = selected_sequence
         current_value = selected_value
 
-    return calculate_flowshop(processing, current), {
+    result = calculate_flowshop(processing, current)
+    return result, {
+        "method": "local_search",
         "objective": objective,
         "strategy": strategy,
         "neighborhood": neighborhood,
@@ -157,7 +177,11 @@ def local_search(
         "max_iterations": max_iterations,
         "max_neighbors": max_neighbors,
         "neighbors_evaluated": neighbors_evaluated,
+        "evaluations": neighbors_evaluated,
+        "evaluation_label": "vecinos",
         "initial_value": initial_value,
         "final_value": current_value,
+        "initial_metrics": initial_metrics,
+        "final_metrics": {"cmax": result["cmax"], "fmax": result["fmax"]},
         "stop_reason": stop_reason,
     }

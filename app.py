@@ -1,5 +1,6 @@
 """Punto de entrada FastAPI y definición de rutas HTTP."""
 
+from dataclasses import replace
 from pathlib import Path
 from typing import Annotated
 
@@ -39,7 +40,52 @@ def list_examples() -> list[str]:
     return get_example_names(EXAMPLES)
 
 
+def _genetic_operators(
+    ga_selection: str = Form(default="tournament"),
+    ga_tournament_size: int = Form(default=3),
+    ga_truncation_fraction: float = Form(default=0.5),
+    ga_crossover: str = Form(default="ox"),
+    ga_crossover_probability: float = Form(default=0.8),
+    ga_mutation: str = Form(default="swap"),
+    ga_mutation_probability: float = Form(default=0.1),
+) -> GeneticOptions:
+    """Lee los operadores del algoritmo genético desde el formulario."""
+    return GeneticOptions(
+        selection=ga_selection,
+        tournament_size=ga_tournament_size,
+        truncation_fraction=ga_truncation_fraction,
+        crossover=ga_crossover,
+        crossover_probability=ga_crossover_probability,
+        mutation=ga_mutation,
+        mutation_probability=ga_mutation_probability,
+    )
+
+
+def _genetic_options(
+    operators: Annotated[GeneticOptions, Depends(_genetic_operators)],
+    ga_population_size: int = Form(default=40),
+    ga_generations: int = Form(default=100),
+    ga_replacement: str = Form(default="generational"),
+    ga_elite_count: int = Form(default=1),
+    ga_stagnation_generations: int = Form(default=20),
+    ga_time_limit_seconds: float = Form(default=10),
+    ga_target_value: float | None = Form(default=None),
+) -> GeneticOptions:
+    """Completa las opciones genéticas con población, reemplazo y parada."""
+    return replace(
+        operators,
+        population_size=ga_population_size,
+        generations=ga_generations,
+        replacement=ga_replacement,
+        elite_count=ga_elite_count,
+        stagnation_generations=ga_stagnation_generations,
+        time_limit_seconds=ga_time_limit_seconds,
+        target_value=ga_target_value,
+    )
+
+
 def _search_options(
+    genetic: Annotated[GeneticOptions, Depends(_genetic_options)],
     algorithm: str = Form(default="calculate"),
     objective: str = Form(default="cmax"),
     strategy: str = Form(default="best"),
@@ -52,20 +98,6 @@ def _search_options(
     iterations_per_temperature: int = Form(default=50),
     final_temperature: float = Form(default=1),
     refine_with_local_search: bool = Form(default=False),
-    ga_population_size: int = Form(default=40),
-    ga_generations: int = Form(default=100),
-    ga_selection: str = Form(default="tournament"),
-    ga_tournament_size: int = Form(default=3),
-    ga_truncation_fraction: float = Form(default=0.5),
-    ga_crossover: str = Form(default="ox"),
-    ga_crossover_probability: float = Form(default=0.8),
-    ga_mutation: str = Form(default="swap"),
-    ga_mutation_probability: float = Form(default=0.1),
-    ga_replacement: str = Form(default="generational"),
-    ga_elite_count: int = Form(default=1),
-    ga_stagnation_generations: int = Form(default=20),
-    ga_time_limit_seconds: float = Form(default=10),
-    ga_target_value: float | None = Form(default=None),
 ) -> SearchOptions:
     """Agrupa los parámetros de búsqueda recibidos como campos del formulario."""
     return SearchOptions(
@@ -81,22 +113,7 @@ def _search_options(
         iterations_per_temperature=iterations_per_temperature,
         final_temperature=final_temperature,
         refine_with_local_search=refine_with_local_search,
-        genetic=GeneticOptions(
-            population_size=ga_population_size,
-            generations=ga_generations,
-            selection=ga_selection,
-            tournament_size=ga_tournament_size,
-            truncation_fraction=ga_truncation_fraction,
-            crossover=ga_crossover,
-            crossover_probability=ga_crossover_probability,
-            mutation=ga_mutation,
-            mutation_probability=ga_mutation_probability,
-            replacement=ga_replacement,
-            elite_count=ga_elite_count,
-            stagnation_generations=ga_stagnation_generations,
-            time_limit_seconds=ga_time_limit_seconds,
-            target_value=ga_target_value,
-        ),
+        genetic=genetic,
     )
 
 

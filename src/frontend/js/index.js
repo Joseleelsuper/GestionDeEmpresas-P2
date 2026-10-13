@@ -243,19 +243,9 @@ function renderSequence(sequence) {
   fullResultSequence.textContent = fullSequence;
 }
 
-function createHistoryCard(result) {
+/** Resume el método y la instancia para la tarjeta del historial. */
+function historyContext(result, method) {
   const { search } = result;
-  const method = search.method || "local_search";
-  const card = document.createElement("article");
-  card.className = "history-card";
-  card.setAttribute("role", "listitem");
-
-  const heading = document.createElement("div");
-  heading.className = "history-card-heading";
-  const strategy = document.createElement("h4");
-  strategy.textContent = `${searchLabels.method[method]}${search.refined_with_local_search ? " + búsqueda local" : ""}`;
-  const context = document.createElement("p");
-  context.className = "history-card-context";
   const contextParts = [];
   if (method === "local_search") contextParts.push(searchLabels.strategy[search.strategy]);
   if (search.neighborhood) contextParts.push(searchLabels.neighborhood[search.neighborhood]);
@@ -282,7 +272,44 @@ function createHistoryCard(result) {
     );
   }
   contextParts.push(`${result.jobs} órdenes · ${result.machines} máquinas`);
-  context.textContent = contextParts.join(" · ");
+  return contextParts.join(" · ");
+}
+
+/** Da formato legible a los parámetros genéticos guardados en la búsqueda. */
+function geneticSettingsText(search) {
+  let selection = searchLabels.selection[search.selection];
+  if (search.selection === "tournament") selection = `Torneo de ${search.tournament_size}`;
+  else if (search.selection === "truncation") selection = `Fracción ${numberFormat.format(search.truncation_fraction)}`;
+  const elite = search.replacement === "generational" ? ` · ${search.elite_count} élites` : "";
+  const time = search.time_limit_seconds ? `${search.time_limit_seconds} s` : "desactivado";
+  const target = search.target_value === null
+    ? "Sin objetivo conocido" : `Objetivo conocido ${numberFormat.format(search.target_value)}`;
+  return [
+    `Población ${search.population_size} · máximo ${search.generations} generaciones`,
+    selection,
+    `Cruce ${searchLabels.crossover[search.crossover]} · Pc ${numberFormat.format(search.crossover_probability)}`,
+    `Mutación ${searchLabels.mutation[search.mutation]} · Pm ${numberFormat.format(search.mutation_probability)}`,
+    searchLabels.replacement[search.replacement] + elite,
+    `Sin mejora ${search.stagnation_generations || "desactivado"} · tiempo ${time}`,
+    target,
+  ].join(" · ");
+}
+
+/** Construye la tarjeta del historial con métricas, parada y parámetros. */
+function createHistoryCard(result) {
+  const { search } = result;
+  const method = search.method || "local_search";
+  const card = document.createElement("article");
+  card.className = "history-card";
+  card.setAttribute("role", "listitem");
+
+  const heading = document.createElement("div");
+  heading.className = "history-card-heading";
+  const strategy = document.createElement("h4");
+  strategy.textContent = `${searchLabels.method[method]}${search.refined_with_local_search ? " + búsqueda local" : ""}`;
+  const context = document.createElement("p");
+  context.className = "history-card-context";
+  context.textContent = historyContext(result, method);
   heading.append(strategy, context);
 
   const measures = document.createElement("div");
@@ -348,15 +375,7 @@ function createHistoryCard(result) {
     const summary = document.createElement("summary");
     summary.textContent = "Ver parámetros";
     const values = document.createElement("p");
-    values.textContent = [
-      `Población ${search.population_size} · máximo ${search.generations} generaciones`,
-      search.selection === "tournament" ? `Torneo de ${search.tournament_size}` : search.selection === "truncation" ? `Fracción ${numberFormat.format(search.truncation_fraction)}` : searchLabels.selection[search.selection],
-      `Cruce ${searchLabels.crossover[search.crossover]} · Pc ${numberFormat.format(search.crossover_probability)}`,
-      `Mutación ${searchLabels.mutation[search.mutation]} · Pm ${numberFormat.format(search.mutation_probability)}`,
-      `${searchLabels.replacement[search.replacement]}${search.replacement === "generational" ? ` · ${search.elite_count} élites` : ""}`,
-      `Sin mejora ${search.stagnation_generations || "desactivado"} · tiempo ${search.time_limit_seconds ? `${search.time_limit_seconds} s` : "desactivado"}`,
-      search.target_value === null ? "Sin objetivo conocido" : `Objetivo conocido ${numberFormat.format(search.target_value)}`,
-    ].join(" · ");
+    values.textContent = geneticSettingsText(search);
     settings.append(summary, values);
     card.append(settings);
   }
@@ -413,33 +432,38 @@ function readLocalSearchParameters(data) {
   return true;
 }
 
-function readGeneticParameters(data) {
+/** Valida población, generaciones y élite antes de leer los operadores. */
+function readGeneticPopulation() {
   const size = readIntegerInput(gaInputs.populationSize, 2, 200, "La población debe tener entre 2 y 200 individuos.");
-  if (size === null) return false;
+  if (size === null) return null;
   const generations = readIntegerInput(gaInputs.generations, 1, 1000, "Las generaciones deben estar entre 1 y 1000.");
-  if (generations === null) return false;
+  if (generations === null) return null;
   const elite = gaInputs.replacement.value === "generational"
     ? readIntegerInput(gaInputs.eliteCount, 0, size - 1, "La élite debe ser menor que la población y no negativa.")
     : 0;
-  if (elite === null) return false;
+  if (elite === null) return null;
   if (size + (size - elite) * generations > 10000) {
     setStatus("La población y las generaciones superan 10.000 candidatos; reduce uno de los valores.", true);
     gaInputs.generations.closest(".genetic-details")?.setAttribute("open", "");
     gaInputs.generations.focus();
-    return false;
+    return null;
   }
+  return { size, generations };
+}
+
+/** Valida y serializa los parámetros genéticos del formulario. */
+function readGeneticParameters(data) {
+  const population = readGeneticPopulation();
+  if (population === null) return false;
+  const { size, generations } = population;
   if (gaInputs.selection.value === "tournament" && readIntegerInput(
     gaInputs.tournamentSize, 2, size, "Los participantes del torneo deben estar entre 2 y el tamaño de la población.",
   ) === null) return false;
   if (gaInputs.selection.value === "truncation" && readRangeInput(
     gaInputs.truncationFraction, 0.01, 1, "La fracción de truncamiento debe estar entre 0,01 y 1.",
   ) === null) return false;
-  for (const [input, label] of [
-    [gaInputs.crossoverProbability, "La probabilidad de cruce"],
-    [gaInputs.mutationProbability, "La probabilidad de mutación"],
-  ]) {
-    if (readRangeInput(input, 0, 1, `${label} debe estar entre 0 y 1.`) === null) return false;
-  }
+  if (readRangeInput(gaInputs.crossoverProbability, 0, 1, "La probabilidad de cruce debe estar entre 0 y 1.") === null) return false;
+  if (readRangeInput(gaInputs.mutationProbability, 0, 1, "La probabilidad de mutación debe estar entre 0 y 1.") === null) return false;
   if (readIntegerInput(gaInputs.stagnationGenerations, 0, 1000, "Las generaciones sin mejora deben estar entre 0 y 1000.") === null) return false;
   if (readRangeInput(gaInputs.timeLimitSeconds, 0, 60, "El límite de tiempo debe estar entre 0 y 60 segundos.") === null) return false;
   if (gaInputs.targetValue.value.trim()) {
@@ -449,6 +473,67 @@ function readGeneticParameters(data) {
   }
   data.set("ga_population_size", String(size));
   data.set("ga_generations", String(generations));
+  return true;
+}
+
+/** Valida y serializa el número de muestras de la búsqueda aleatoria. */
+function readRandomSearchParameters(data) {
+  const iterations = readIntegerInput(
+    randomIterationsInput, 1, 10000, "Las iteraciones aleatorias deben ser un entero entre 1 y 10000.",
+  );
+  if (iterations === null) return false;
+  data.set("random_iterations", String(iterations));
+  return true;
+}
+
+/** Valida la agenda de recocido y la incorpora al formulario. */
+function readAnnealingParameters(data) {
+  const initialTemperature = readPositiveInput(
+    initialTemperatureInput, "T₀ debe ser un número positivo y finito.",
+  );
+  if (initialTemperature === null) return false;
+  const coolingRate = Number(coolingRateInput.value);
+  if (!Number.isFinite(coolingRate) || coolingRate <= 0 || coolingRate >= 1) {
+    setStatus("α debe ser un número mayor que 0 y menor que 1.", true);
+    coolingRateInput.focus();
+    return false;
+  }
+  const iterationsPerTemperature = readIntegerInput(
+    iterationsPerTemperatureInput, 1, 10000, "L(T) debe ser un entero entre 1 y 10000.",
+  );
+  if (iterationsPerTemperature === null) return false;
+  const finalTemperature = readPositiveInput(
+    finalTemperatureInput, "Tf debe ser un número positivo y finito.",
+  );
+  if (finalTemperature === null) return false;
+  if (initialTemperature < finalTemperature) {
+    setStatus("T₀ debe ser mayor o igual que Tf.", true);
+    initialTemperatureInput.focus();
+    return false;
+  }
+  const schedule = annealingSchedule(
+    initialTemperature, coolingRate, iterationsPerTemperature, finalTemperature,
+  );
+  if (!schedule) {
+    setStatus("La combinación supera el máximo de 10000 propuestas; ajusta α, L(T) o Tf.", true);
+    coolingRateInput.focus();
+    return false;
+  }
+  data.set("initial_temperature", String(initialTemperature));
+  data.set("cooling_rate", String(coolingRate));
+  data.set("iterations_per_temperature", String(iterationsPerTemperature));
+  data.set("final_temperature", String(finalTemperature));
+  data.set("refine_with_local_search", String(refineWithLocalSearchInput.checked));
+  return true;
+}
+
+/** Aplica las validaciones específicas del algoritmo seleccionado. */
+function readSearchParameters(data, algorithm) {
+  const refinesAnnealing = algorithm === "simulated_annealing" && refineWithLocalSearchInput.checked;
+  if ((algorithm === "local_search" || refinesAnnealing) && !readLocalSearchParameters(data)) return false;
+  if (algorithm === "random_search" && !readRandomSearchParameters(data)) return false;
+  if (algorithm === "genetic_algorithm" && !readGeneticParameters(data)) return false;
+  if (algorithm === "simulated_annealing" && !readAnnealingParameters(data)) return false;
   return true;
 }
 
@@ -530,6 +615,7 @@ for (const input of [
   });
 }
 
+// Envía el cálculo validado y muestra el resultado sin recargar la página.
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!fileInput.files.length && !exampleSelect.value) {
@@ -542,54 +628,7 @@ form.addEventListener("submit", async (event) => {
   else data.delete("file");
   const algorithm = event.submitter === calculateButton ? "calculate" : searchAlgorithmInput.value;
   data.set("algorithm", algorithm);
-  const refinesAnnealing = algorithm === "simulated_annealing" && refineWithLocalSearchInput.checked;
-  if ((algorithm === "local_search" || refinesAnnealing) && !readLocalSearchParameters(data)) return;
-  if (algorithm === "random_search") {
-    const iterations = readIntegerInput(
-      randomIterationsInput, 1, 10000, "Las iteraciones aleatorias deben ser un entero entre 1 y 10000.",
-    );
-    if (iterations === null) return;
-    data.set("random_iterations", String(iterations));
-  }
-  if (algorithm === "genetic_algorithm" && !readGeneticParameters(data)) return;
-  if (algorithm === "simulated_annealing") {
-    const initialTemperature = readPositiveInput(
-      initialTemperatureInput, "T₀ debe ser un número positivo y finito.",
-    );
-    if (initialTemperature === null) return;
-    const coolingRate = Number(coolingRateInput.value);
-    if (!Number.isFinite(coolingRate) || coolingRate <= 0 || coolingRate >= 1) {
-      setStatus("α debe ser un número mayor que 0 y menor que 1.", true);
-      coolingRateInput.focus();
-      return;
-    }
-    const iterationsPerTemperature = readIntegerInput(
-      iterationsPerTemperatureInput, 1, 10000, "L(T) debe ser un entero entre 1 y 10000.",
-    );
-    if (iterationsPerTemperature === null) return;
-    const finalTemperature = readPositiveInput(
-      finalTemperatureInput, "Tf debe ser un número positivo y finito.",
-    );
-    if (finalTemperature === null) return;
-    if (initialTemperature < finalTemperature) {
-      setStatus("T₀ debe ser mayor o igual que Tf.", true);
-      initialTemperatureInput.focus();
-      return;
-    }
-    const schedule = annealingSchedule(
-      initialTemperature, coolingRate, iterationsPerTemperature, finalTemperature,
-    );
-    if (!schedule) {
-      setStatus("La combinación supera el máximo de 10000 propuestas; ajusta α, L(T) o Tf.", true);
-      coolingRateInput.focus();
-      return;
-    }
-    data.set("initial_temperature", String(initialTemperature));
-    data.set("cooling_rate", String(coolingRate));
-    data.set("iterations_per_temperature", String(iterationsPerTemperature));
-    data.set("final_temperature", String(finalTemperature));
-    data.set("refine_with_local_search", String(refineWithLocalSearchInput.checked));
-  }
+  if (!readSearchParameters(data, algorithm)) return;
   calculateButton.disabled = true;
   searchButton.disabled = true;
   randomizeButton.disabled = true;
@@ -628,4 +667,4 @@ form.addEventListener("submit", async (event) => {
   }
 });
 
-loadExamples();
+await loadExamples();

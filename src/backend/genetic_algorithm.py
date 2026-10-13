@@ -3,6 +3,7 @@
 import math
 import random
 import time
+from collections.abc import Callable
 from dataclasses import asdict, dataclass
 
 from .flowshop import calculate_flowshop
@@ -32,7 +33,20 @@ class GeneticOptions:
     target_value: float | None = None
 
 
-def _validate(options: GeneticOptions, jobs: int, machines: int) -> None:
+@dataclass
+class _EvolutionState:
+    """Estado mutable de la población y del criterio de parada."""
+
+    population: list[tuple[list[int], float]]
+    best_sequence: list[int]
+    best_value: float
+    generations_run: int = 0
+    stagnant: int = 0
+    stop_reason: str = "max_generations"
+
+
+def _validate_population(options: GeneticOptions, jobs: int, machines: int) -> None:
+    """Comprueba el tamaño de la población y el presupuesto de cálculo."""
     if not 2 <= options.population_size <= 200:
         raise ValueError("La población debe tener entre 2 y 200 individuos.")
     if not 1 <= options.generations <= 1000:
@@ -45,12 +59,20 @@ def _validate(options: GeneticOptions, jobs: int, machines: int) -> None:
     evaluations = options.population_size + offspring * options.generations
     if evaluations > MAX_GENETIC_EVALUATIONS or evaluations * jobs * machines > MAX_GENETIC_OPERATIONS:
         raise ValueError("La población y las generaciones superan el límite de cálculo; reduce uno de los dos valores.")
+
+
+def _validate_selection(options: GeneticOptions) -> None:
+    """Comprueba el método de selección y sus parámetros."""
     if options.selection not in {"tournament", "roulette", "average", "truncation"}:
         raise ValueError("Elige torneo, ruleta, media o truncamiento para la selección.")
     if options.selection == "tournament" and not 2 <= options.tournament_size <= options.population_size:
         raise ValueError("El tamaño del torneo debe estar entre 2 y el tamaño de la población.")
     if not math.isfinite(options.truncation_fraction) or not 0 < options.truncation_fraction <= 1:
         raise ValueError("La fracción de truncamiento debe ser mayor que 0 y como máximo 1.")
+
+
+def _validate_operators(options: GeneticOptions) -> None:
+    """Comprueba los operadores de cruce y mutación y sus probabilidades."""
     if options.crossover not in {"ox", "pmx", "cx"}:
         raise ValueError("El cruce debe ser OX, PMX o CX.")
     if options.mutation not in {"swap", "insert", "invert"}:
@@ -61,6 +83,10 @@ def _validate(options: GeneticOptions, jobs: int, machines: int) -> None:
     ):
         if not math.isfinite(value) or not 0 <= value <= 1:
             raise ValueError(f"{label} debe estar entre 0 y 1.")
+
+
+def _validate_stopping(options: GeneticOptions) -> None:
+    """Comprueba los límites de estancamiento, tiempo y objetivo."""
     if not 0 <= options.stagnation_generations <= 1000:
         raise ValueError("Las generaciones sin mejora deben estar entre 0 y 1000.")
     if not math.isfinite(options.time_limit_seconds) or not 0 <= options.time_limit_seconds <= 60:
@@ -69,6 +95,14 @@ def _validate(options: GeneticOptions, jobs: int, machines: int) -> None:
         not math.isfinite(options.target_value) or options.target_value < 0
     ):
         raise ValueError("El objetivo conocido debe ser un número finito no negativo.")
+
+
+def _validate(options: GeneticOptions, jobs: int, machines: int) -> None:
+    """Valida todas las opciones antes de evaluar individuos."""
+    _validate_population(options, jobs, machines)
+    _validate_selection(options)
+    _validate_operators(options)
+    _validate_stopping(options)
 
 
 def _select(population: list[tuple[list[int], float]], options: GeneticOptions) -> list[int]:
@@ -150,6 +184,120 @@ def _mutate(sequence: list[int], method: str) -> None:
         sequence[first : second + 1] = reversed(sequence[first : second + 1])
 
 
+def _make_children(
+    population: list[tuple[list[int], float]], options: GeneticOptions
+) -> tuple[list[int], list[int]]:
+    """Selecciona dos padres y devuelve hijos cruzados o copias."""
+    first = _select(population, options)
+    second = _select(population, options)
+    if random.random() < options.crossover_probability:
+        return _crossover(first, second, options.crossover)
+    return first.copy(), second.copy()
+
+
+def _process_child(
+    child: list[int],
+    options: GeneticOptions,
+    state: _EvolutionState,
+    evaluate: Callable[[list[int]], float],
+    next_population: list[tuple[list[int], float]],
+) -> bool:
+    """Evalúa un hijo, actualiza la población y señala si mejora el mejor valor."""
+    if random.random() < options.mutation_probability:
+        _mutate(child, options.mutation)
+    value = evaluate(child)
+    improved = value < state.best_value
+    if improved:
+        state.best_sequence, state.best_value = child.copy(), value
+    if options.replacement == "generational":
+        next_population.append((child, value))
+    else:
+        ranked = sorted(
+            range(len(state.population)),
+            key=lambda index: state.population[index][1],
+        )
+        state.population[ranked[-1]] = (child, value)
+    if options.target_value is not None and state.best_value <= options.target_value:
+        state.stop_reason = "target_reached"
+    return improved
+
+
+def _add_offspring(
+    children: tuple[list[int], ...],
+    options: GeneticOptions,
+    state: _EvolutionState,
+    evaluate: Callable[[list[int]], float],
+    next_population: list[tuple[list[int], float]],
+) -> tuple[int, bool]:
+    """Incorpora hijos hasta alcanzar el objetivo y devuelve cantidad y mejora."""
+    produced = 0
+    improved = False
+    for child in children:
+        if _process_child(child, options, state, evaluate, next_population):
+            improved = True
+        produced += 1
+        if state.stop_reason != "max_generations":
+            break
+    return produced, improved
+
+
+def _run_generation(
+    options: GeneticOptions,
+    state: _EvolutionState,
+    evaluate: Callable[[list[int]], float],
+    deadline: float | None,
+    elite_count: int,
+) -> bool:
+    """Completa una generación o detiene la búsqueda al agotar el tiempo."""
+    next_population = sorted(state.population, key=lambda item: item[1])[:elite_count]
+    needed = options.population_size - elite_count
+    produced = 0
+    improved = False
+    while produced < needed:
+        if deadline is not None and time.monotonic() >= deadline:
+            state.stop_reason = "time_limit"
+            break
+        children = _make_children(state.population, options)
+        added, better = _add_offspring(
+            children[: needed - produced], options, state, evaluate, next_population
+        )
+        produced += added
+        improved = improved or better
+        if state.stop_reason != "max_generations":
+            break
+    if state.stop_reason == "max_generations" and options.replacement == "generational":
+        state.population = next_population
+    return improved
+
+
+def _evolve(
+    options: GeneticOptions,
+    state: _EvolutionState,
+    evaluate: Callable[[list[int]], float],
+    deadline: float | None,
+    elite_count: int,
+) -> None:
+    """Avanza generaciones hasta alcanzar el objetivo o un límite de parada."""
+    if options.target_value is not None and state.best_value <= options.target_value:
+        state.stop_reason = "target_reached"
+        return
+    for _ in range(options.generations):
+        if deadline is not None and time.monotonic() >= deadline:
+            state.stop_reason = "time_limit"
+            break
+        state.generations_run += 1
+        improved = _run_generation(options, state, evaluate, deadline, elite_count)
+        if state.stop_reason != "max_generations":
+            break
+        state.stagnant = 0 if improved else state.stagnant + 1
+        if (
+            options.stagnation_generations
+            and state.stagnant >= options.stagnation_generations
+        ):
+            state.stop_reason = "stagnation"
+            break
+
+
 def genetic_algorithm(
     processing: list[list[int]],
     sequence: list[int],
@@ -178,76 +326,24 @@ def genetic_algorithm(
     ]
     population = [(candidate, evaluate(candidate)) for candidate in sequences]
     best_sequence, best_value = min(population, key=lambda item: item[1])
-    best_sequence = best_sequence.copy()
-    generations_run = 0
-    stagnant = 0
-    stop_reason = "max_generations"
+    state = _EvolutionState(population, best_sequence.copy(), best_value)
     deadline = time.monotonic() + options.time_limit_seconds if options.time_limit_seconds else None
     elite_count = options.elite_count if options.replacement == "generational" else 0
+    _evolve(options, state, evaluate, deadline, elite_count)
 
-    if options.target_value is not None and best_value <= options.target_value:
-        stop_reason = "target_reached"
-    else:
-        for _ in range(options.generations):
-            if deadline is not None and time.monotonic() >= deadline:
-                stop_reason = "time_limit"
-                break
-            generations_run += 1
-            improved = False
-            next_population = sorted(population, key=lambda item: item[1])[:elite_count]
-            needed = options.population_size - elite_count
-            produced = 0
-            while produced < needed:
-                if deadline is not None and time.monotonic() >= deadline:
-                    stop_reason = "time_limit"
-                    break
-                first = _select(population, options)
-                second = _select(population, options)
-                children = (
-                    _crossover(first, second, options.crossover)
-                    if random.random() < options.crossover_probability
-                    else (first.copy(), second.copy())
-                )
-                for child in children[: needed - produced]:
-                    if random.random() < options.mutation_probability:
-                        _mutate(child, options.mutation)
-                    value = evaluate(child)
-                    produced += 1
-                    if value < best_value:
-                        best_sequence, best_value = child.copy(), value
-                        improved = True
-                    if options.replacement == "generational":
-                        next_population.append((child, value))
-                    else:
-                        ranked = sorted(range(len(population)), key=lambda index: population[index][1])
-                        population[ranked[-1]] = (child, value)
-                    if options.target_value is not None and best_value <= options.target_value:
-                        stop_reason = "target_reached"
-                        break
-                if stop_reason != "max_generations":
-                    break
-            if stop_reason != "max_generations":
-                break
-            if options.replacement == "generational":
-                population = next_population
-            stagnant = 0 if improved else stagnant + 1
-            if options.stagnation_generations and stagnant >= options.stagnation_generations:
-                stop_reason = "stagnation"
-                break
-
-    result = calculate_flowshop(processing, best_sequence)
+    result = calculate_flowshop(processing, state.best_sequence)
     return result, {
         "method": "genetic_algorithm",
         "objective": objective,
         **asdict(options),
         "elite_count": elite_count,
-        "iterations": generations_run,
+        "iterations": state.generations_run,
         "max_iterations": options.generations,
         "evaluations": len(cache),
         "evaluation_label": "evaluaciones únicas",
         "initial_value": initial_value,
-        "final_value": best_value,
+        "final_value": state.best_value,
         "initial_metrics": {"cmax": initial_result["cmax"], "fmax": initial_result["fmax"]},
         "final_metrics": {"cmax": result["cmax"], "fmax": result["fmax"]},
-        "stop_reason": stop_reason,
+        "stop_reason": state.stop_reason,
     }

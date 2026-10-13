@@ -4,17 +4,10 @@ import math
 import random
 
 from .flowshop import calculate_flowshop
-from .local_search import _objective_value
+from .local_search import _move, _score
 
 MAX_RANDOM_ITERATIONS = 10_000
 MAX_ANNEALING_EVALUATIONS = 10_000
-
-
-def _score(processing: list[list[int]], sequence: list[int], objective: str) -> float:
-    value = _objective_value(processing, sequence, objective)
-    if value is None:
-        raise RuntimeError("La evaluación completa no puede descartarse.")
-    return value
 
 
 def _metrics(result: dict) -> dict[str, int | float]:
@@ -24,6 +17,71 @@ def _metrics(result: dict) -> dict[str, int | float]:
 def _validate_objective(objective: str) -> None:
     if objective not in {"cmax", "fmax"}:
         raise ValueError("El objetivo debe ser Cmáx o Fmáx.")
+
+
+def _temperature_levels(
+    initial_temperature: float,
+    cooling_rate: float,
+    iterations_per_temperature: int,
+    final_temperature: float,
+) -> int:
+    """Valida el calendario y cuenta sus niveles sin superar el límite."""
+    if not math.isfinite(initial_temperature) or initial_temperature <= 0:
+        raise ValueError("La temperatura inicial debe ser un número positivo finito.")
+    if not math.isfinite(final_temperature) or final_temperature <= 0:
+        raise ValueError("La temperatura final debe ser un número positivo finito.")
+    if initial_temperature < final_temperature:
+        raise ValueError("La temperatura inicial debe ser mayor o igual que la final.")
+    if not math.isfinite(cooling_rate) or not 0 < cooling_rate < 1:
+        raise ValueError("α debe estar entre 0 y 1, sin incluirlos.")
+    if not 1 <= iterations_per_temperature <= MAX_ANNEALING_EVALUATIONS:
+        raise ValueError(
+            f"L(T) debe estar entre 1 y {MAX_ANNEALING_EVALUATIONS}."
+        )
+
+    levels = 0
+    temperature = initial_temperature
+    while temperature >= final_temperature:
+        levels += 1
+        if levels * iterations_per_temperature > MAX_ANNEALING_EVALUATIONS:
+            raise ValueError(
+                "La combinación de temperaturas y L(T) supera el límite de "
+                f"{MAX_ANNEALING_EVALUATIONS} evaluaciones."
+            )
+        temperature *= cooling_rate
+    return levels
+
+
+def _anneal_schedule(
+    processing: list[list[int]],
+    current: list[int],
+    current_value: float,
+    objective: str,
+    neighborhood: str,
+    initial_temperature: float,
+    cooling_rate: float,
+    temperature_levels: int,
+    iterations_per_temperature: int,
+) -> tuple[list[int], float]:
+    """Explora propuestas y conserva la mejor solución visitada."""
+    best_sequence = current.copy()
+    best_value = current_value
+    temperature = initial_temperature
+    for _ in range(temperature_levels):
+        for _ in range(iterations_per_temperature):
+            first, second = sorted(random.sample(range(len(current)), 2))
+            candidate = current.copy()
+            _move(candidate, first, second, neighborhood)
+            candidate_value = _score(processing, candidate, objective)
+            delta = candidate_value - current_value
+            if delta < 0 or random.random() < math.exp(-delta / temperature):
+                current = candidate
+                current_value = candidate_value
+                if current_value < best_value:
+                    best_sequence = current.copy()
+                    best_value = current_value
+        temperature *= cooling_rate
+    return best_sequence, best_value
 
 
 def random_search(
@@ -86,62 +144,34 @@ def simulated_annealing(
     _validate_objective(objective)
     if neighborhood not in {"swap", "2opt"}:
         raise ValueError("El movimiento debe ser intercambio o inversión 2-opt.")
-    if not math.isfinite(initial_temperature) or initial_temperature <= 0:
-        raise ValueError("La temperatura inicial debe ser un número positivo finito.")
-    if not math.isfinite(final_temperature) or final_temperature <= 0:
-        raise ValueError("La temperatura final debe ser un número positivo finito.")
-    if initial_temperature < final_temperature:
-        raise ValueError("La temperatura inicial debe ser mayor o igual que la final.")
-    if not math.isfinite(cooling_rate) or not 0 < cooling_rate < 1:
-        raise ValueError("α debe estar entre 0 y 1, sin incluirlos.")
-    if not 1 <= iterations_per_temperature <= MAX_ANNEALING_EVALUATIONS:
-        raise ValueError(
-            f"L(T) debe estar entre 1 y {MAX_ANNEALING_EVALUATIONS}."
-        )
-
-    temperature_levels = 0
-    temperature = initial_temperature
-    while temperature >= final_temperature:
-        temperature_levels += 1
-        if temperature_levels * iterations_per_temperature > MAX_ANNEALING_EVALUATIONS:
-            raise ValueError(
-                "La combinación de temperaturas y L(T) supera el límite de "
-                f"{MAX_ANNEALING_EVALUATIONS} evaluaciones."
-            )
-        temperature *= cooling_rate
+    temperature_levels = _temperature_levels(
+        initial_temperature, cooling_rate, iterations_per_temperature, final_temperature
+    )
 
     current = list(sequence)
     initial_result = calculate_flowshop(processing, current)
     current_value = _score(processing, current, objective)
     initial_value = current_value
-    best_sequence = current.copy()
-    best_value = current_value
     iterations = 0
     stop_reason = "final_temperature"
 
     if len(current) < 2:
         stop_reason = "empty_neighborhood"
+        best_sequence = current.copy()
+        best_value = current_value
     else:
-        temperature = initial_temperature
-        for _ in range(temperature_levels):
-            for _ in range(iterations_per_temperature):
-                first, second = sorted(random.sample(range(len(current)), 2))
-                candidate = current.copy()
-                if neighborhood == "swap":
-                    candidate[first], candidate[second] = candidate[second], candidate[first]
-                else:
-                    candidate[first : second + 1] = reversed(candidate[first : second + 1])
-
-                candidate_value = _score(processing, candidate, objective)
-                iterations += 1
-                delta = candidate_value - current_value
-                if delta < 0 or random.random() < math.exp(-delta / temperature):
-                    current = candidate
-                    current_value = candidate_value
-                    if current_value < best_value:
-                        best_sequence = current.copy()
-                        best_value = current_value
-            temperature *= cooling_rate
+        best_sequence, best_value = _anneal_schedule(
+            processing,
+            current,
+            current_value,
+            objective,
+            neighborhood,
+            initial_temperature,
+            cooling_rate,
+            temperature_levels,
+            iterations_per_temperature,
+        )
+        iterations = temperature_levels * iterations_per_temperature
 
     result = (
         initial_result

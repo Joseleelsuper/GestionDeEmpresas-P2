@@ -4,6 +4,19 @@ MAX_FILE_BYTES = 1_048_576
 MAX_OPERATIONS = 10_000
 
 
+def _parse_header(fields: list[str]) -> tuple[int, int]:
+    """Lee el número de órdenes y máquinas de la cabecera."""
+    try:
+        if len(fields) != 2:
+            raise ValueError
+        jobs, machines = map(int, fields)
+        return jobs, machines
+    except ValueError:
+        raise ValueError(
+            "La primera línea debe contener el número de órdenes y máquinas."
+        ) from None
+
+
 def parse_instance(text: str) -> list[list[int]]:
     """Lee una instancia TXT y obtiene sus duraciones por orden y máquina.
 
@@ -22,14 +35,7 @@ def parse_instance(text: str) -> list[list[int]]:
     if not lines:
         raise ValueError("El archivo está vacío.")
 
-    try:
-        if len(lines[0]) != 2:
-            raise ValueError
-        jobs, machines = map(int, lines[0])
-    except ValueError:
-        raise ValueError(
-            "La primera línea debe contener el número de órdenes y máquinas."
-        ) from None
+    jobs, machines = _parse_header(lines[0])
 
     if jobs < 1 or machines < 1:
         raise ValueError("La instancia debe tener al menos una orden y una máquina.")
@@ -39,7 +45,8 @@ def parse_instance(text: str) -> list[list[int]]:
         )
     if len(lines) != jobs + 1:
         raise ValueError(
-            f"Se esperaban {jobs} filas de operaciones y se recibieron {len(lines) - 1}."
+            f"Se esperaban {jobs} filas de operaciones "
+            f"y se recibieron {len(lines) - 1}."
         )
 
     processing = []
@@ -56,7 +63,8 @@ def parse_instance(text: str) -> list[list[int]]:
             ) from None
         if values[::2] != list(range(machines)):
             raise ValueError(
-                f"La orden {job} debe listar las máquinas en orden de 0 a {machines - 1}."
+                f"La orden {job} debe listar las máquinas "
+                f"en orden de 0 a {machines - 1}."
             )
         durations = values[1::2]
         if any(duration < 0 for duration in durations):

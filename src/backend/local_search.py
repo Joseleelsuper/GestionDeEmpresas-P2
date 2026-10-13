@@ -28,15 +28,26 @@ def _objective_value(
             ) + duration
         previous, current = current, previous
         total_completion += previous[-1]
-        if cutoff is not None:
-            if objective == "cmax" and previous[-1] >= cutoff:
-                return None
-            if objective == "fmax" and total_completion >= cutoff * len(sequence):
-                return None
+        if cutoff is not None and objective == "cmax" and previous[-1] >= cutoff:
+            return None
+        if (
+            cutoff is not None
+            and objective == "fmax"
+            and total_completion >= cutoff * len(sequence)
+        ):
+            return None
 
     if objective == "cmax":
         return previous[-1]
     return total_completion / len(sequence)
+
+
+def _score(processing: list[list[int]], sequence: list[int], objective: str) -> float:
+    """Evalúa una solución completa, sin corte por prefijo."""
+    value = _objective_value(processing, sequence, objective)
+    if value is None:
+        raise RuntimeError("La evaluación completa no puede descartarse.")
+    return value
 
 
 def _pair_start(first: int, size: int) -> int:
@@ -67,6 +78,63 @@ def _neighbor_pairs(size: int, max_neighbors: int) -> Iterator[tuple[int, int]]:
 
     for index in sorted(random.sample(range(total), max_neighbors)):
         yield _pair_at(index, size)
+
+
+def _move(sequence: list[int], first: int, second: int, neighborhood: str) -> None:
+    """Aplica o revierte un intercambio o una inversión sobre la misma secuencia."""
+    if neighborhood == "swap":
+        sequence[first], sequence[second] = sequence[second], sequence[first]
+    else:
+        sequence[first : second + 1] = reversed(sequence[first : second + 1])
+
+
+def _should_select(
+    strategy: str,
+    candidate_value: float,
+    selected_value: float,
+    improving_neighbors: int,
+) -> bool:
+    """Decide si la mejora sustituye a la seleccionada hasta ahora."""
+    if strategy == "first":
+        return True
+    if strategy == "best":
+        return candidate_value < selected_value
+    return random.randrange(improving_neighbors) == 0
+
+
+def _select_neighbor(
+    processing: list[list[int]],
+    current: list[int],
+    current_value: float,
+    objective: str,
+    strategy: str,
+    neighborhood: str,
+    max_neighbors: int,
+) -> tuple[list[int] | None, float, int]:
+    """Selecciona una mejora y cuenta las evaluaciones del vecindario."""
+    selected_sequence = None
+    selected_value = current_value
+    improving_neighbors = 0
+    evaluated = 0
+
+    for first, second in _neighbor_pairs(len(current), max_neighbors):
+        _move(current, first, second, neighborhood)
+        cutoff = selected_value if strategy == "best" else current_value
+        candidate_value = _objective_value(processing, current, objective, cutoff)
+        evaluated += 1
+        if candidate_value is not None and candidate_value < current_value:
+            improving_neighbors += 1
+            if _should_select(
+                strategy, candidate_value, selected_value, improving_neighbors
+            ):
+                selected_sequence = current.copy()
+                selected_value = candidate_value
+
+        _move(current, first, second, neighborhood)
+        if strategy == "first" and selected_sequence is not None:
+            break
+
+    return selected_sequence, selected_value, evaluated
 
 
 def local_search(
@@ -102,19 +170,27 @@ def local_search(
     if neighborhood not in {"swap", "2opt"}:
         raise ValueError("El vecindario debe ser intercambio o inversión 2-opt.")
     if not 1 <= max_iterations <= MAX_ITERATIONS:
-        raise ValueError(f"El máximo de iteraciones debe estar entre 1 y {MAX_ITERATIONS}.")
+        raise ValueError(
+            f"El máximo de iteraciones debe estar entre 1 y {MAX_ITERATIONS}."
+        )
     if not 0 <= max_neighbors <= MAX_NEIGHBORS:
         raise ValueError(
             f"Los vecinos por iteración deben estar entre 0 y {MAX_NEIGHBORS}."
         )
 
     current = list(sequence)
-    current_value = _objective_value(processing, current, objective)
+    current_value = _score(processing, current, objective)
     initial_value = current_value
     initial_metrics = {
-        "cmax": current_value if objective == "cmax" else _objective_value(processing, current, "cmax"),
+        "cmax": (
+            current_value
+            if objective == "cmax"
+            else _score(processing, current, "cmax")
+        ),
         "fmax": round(
-            current_value if objective == "fmax" else _objective_value(processing, current, "fmax"),
+            current_value
+            if objective == "fmax"
+            else _score(processing, current, "fmax"),
             2,
         ),
     }
@@ -126,42 +202,21 @@ def local_search(
 
     for _ in range(max_iterations):
         iterations += 1
-        selected_sequence = None
-        selected_value = current_value
-        improving_neighbors = 0
-
-        for first, second in _neighbor_pairs(len(current), max_neighbors):
-            if neighborhood == "swap":
-                current[first], current[second] = current[second], current[first]
-            else:
-                current[first : second + 1] = reversed(current[first : second + 1])
-
-            cutoff = selected_value if strategy == "best" else current_value
-            candidate_value = _objective_value(processing, current, objective, cutoff)
-            neighbors_evaluated += 1
-            if candidate_value is not None and candidate_value < current_value:
-                improving_neighbors += 1
-                if strategy == "first":
-                    selected_sequence = current.copy()
-                    selected_value = candidate_value
-                elif strategy == "best":
-                    if selected_sequence is None or candidate_value < selected_value:
-                        selected_sequence = current.copy()
-                        selected_value = candidate_value
-                elif random.randrange(improving_neighbors) == 0:
-                    selected_sequence = current.copy()
-                    selected_value = candidate_value
-
-            if neighborhood == "swap":
-                current[first], current[second] = current[second], current[first]
-            else:
-                current[first : second + 1] = reversed(current[first : second + 1])
-
-            if strategy == "first" and selected_sequence is not None:
-                break
+        selected_sequence, selected_value, evaluated = _select_neighbor(
+            processing,
+            current,
+            current_value,
+            objective,
+            strategy,
+            neighborhood,
+            max_neighbors,
+        )
+        neighbors_evaluated += evaluated
 
         if selected_sequence is None:
-            stop_reason = "local_optimum" if full_neighborhood else "sample_no_improvement"
+            stop_reason = (
+                "local_optimum" if full_neighborhood else "sample_no_improvement"
+            )
             break
 
         current = selected_sequence

@@ -23,7 +23,7 @@ El problema del flow shop permutacional consiste en programar una serie de traba
 ## Ejecución
 
 > [!Note]
-> Solamente necesitas tener docker instalado.
+> Solamente necesitas tener Docker / Docker Desktop instalado.
 
 Ejecuta:
 

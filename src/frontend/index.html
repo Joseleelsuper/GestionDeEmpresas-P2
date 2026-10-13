@@ -12,9 +12,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined&icon_names=cycle,home&display=block"
     rel="stylesheet">
-  <link rel="stylesheet" href="css/global.css?v=20261009">
-  <link rel="stylesheet" href="css/pages/index.css?v=20261009">
-  <script src="js/index.js?v=20261009" defer></script>
+  <link rel="stylesheet" href="css/global.css?v=20261013">
+  <link rel="stylesheet" href="css/pages/index.css?v=20261013">
+  <script src="js/index.js?v=20261013" defer></script>
 </head>
 
 <body>
@@ -58,6 +58,7 @@
               <option value="random_search">Búsqueda aleatoria</option>
               <option value="local_search">Búsqueda local</option>
               <option value="simulated_annealing">Recocido simulado</option>
+              <option value="genetic_algorithm">Algoritmo genético</option>
             </select>
 
             <label for="search-objective">Función objetivo</label>
@@ -124,8 +125,84 @@
               <p class="field-help" id="neighbors-help">Evalúa hasta ese número de movimientos; 0 recorre todos y puede tardar más.</p>
             </div>
 
+            <div class="search-field-group" id="genetic-fields" hidden>
+              <details class="genetic-details" open>
+                <summary>Población</summary>
+                <label for="ga-population-size">Individuos</label>
+                <input id="ga-population-size" name="ga_population_size" type="number" min="2" max="200" step="1" value="40">
+
+                <label for="ga-generations">Máximo de generaciones</label>
+                <input id="ga-generations" name="ga_generations" type="number" min="1" max="1000" step="1" value="100">
+                <p class="field-help" id="ga-estimate" aria-live="polite"></p>
+              </details>
+
+              <details class="genetic-details">
+                <summary>Selección y operadores</summary>
+                <label for="ga-selection">Selección de padres</label>
+                <select id="ga-selection" name="ga_selection">
+                  <option value="tournament">Torneo</option>
+                  <option value="roulette">Ruleta por rango</option>
+                  <option value="average">Por media</option>
+                  <option value="truncation">Truncamiento</option>
+                </select>
+
+                <div class="search-field-group" id="ga-tournament-fields">
+                  <label for="ga-tournament-size">Participantes por torneo</label>
+                  <input id="ga-tournament-size" name="ga_tournament_size" type="number" min="2" max="200" step="1" value="3">
+                </div>
+                <div class="search-field-group" id="ga-truncation-fields" hidden>
+                  <label for="ga-truncation-fraction">Fracción superior seleccionable</label>
+                  <input id="ga-truncation-fraction" name="ga_truncation_fraction" type="number" min="0.01" max="1" step="any" value="0.5">
+                </div>
+
+                <label for="ga-crossover">Cruce</label>
+                <select id="ga-crossover" name="ga_crossover">
+                  <option value="ox">OX · orden</option>
+                  <option value="pmx">PMX · correspondencia</option>
+                  <option value="cx">CX · ciclos</option>
+                </select>
+                <label for="ga-crossover-probability">Probabilidad de cruce Pc</label>
+                <input id="ga-crossover-probability" name="ga_crossover_probability" type="number" min="0" max="1" step="any" value="0.8">
+
+                <label for="ga-mutation">Mutación</label>
+                <select id="ga-mutation" name="ga_mutation">
+                  <option value="swap">Intercambio</option>
+                  <option value="insert">Inserción</option>
+                  <option value="invert">Inversión</option>
+                </select>
+                <label for="ga-mutation-probability">Probabilidad de mutación Pm</label>
+                <input id="ga-mutation-probability" name="ga_mutation_probability" type="number" min="0" max="1" step="any" value="0.1">
+                <p class="field-help">Pc y Pm se aplican por pareja e hijo, respectivamente.</p>
+              </details>
+
+              <details class="genetic-details">
+                <summary>Reemplazo y parada</summary>
+                <label for="ga-replacement">Reemplazo</label>
+                <select id="ga-replacement" name="ga_replacement">
+                  <option value="generational">Generacional</option>
+                  <option value="steady">Estacionario</option>
+                </select>
+
+                <div class="search-field-group" id="ga-elite-fields">
+                  <label for="ga-elite-count">Élites conservadas</label>
+                  <input id="ga-elite-count" name="ga_elite_count" type="number" min="0" max="199" step="1" value="1">
+                </div>
+
+                <label for="ga-stagnation-generations">Generaciones sin mejora</label>
+                <input id="ga-stagnation-generations" name="ga_stagnation_generations" type="number" min="0" max="1000" step="1" value="20">
+                <p class="field-help">0 desactiva este criterio de parada.</p>
+
+                <label for="ga-time-limit-seconds">Límite de tiempo (segundos)</label>
+                <input id="ga-time-limit-seconds" name="ga_time_limit_seconds" type="number" min="0" max="60" step="any" value="10">
+                <p class="field-help">0 desactiva el límite de tiempo.</p>
+
+                <label for="ga-target-value">Objetivo conocido (opcional)</label>
+                <input id="ga-target-value" name="ga_target_value" type="number" min="0" step="any" placeholder="Sin objetivo conocido">
+              </details>
+            </div>
+
             <button class="button button-quiet search-button" id="search-button" type="submit"
-              value="search">Ejecutar búsqueda</button>
+              value="search" formnovalidate>Ejecutar búsqueda</button>
           </details>
         </form>
         <output class="status" id="status" aria-live="polite" hidden></output>

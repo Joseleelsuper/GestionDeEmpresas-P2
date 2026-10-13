@@ -12,13 +12,14 @@ En esta práctica se implementan distintos algoritmos de optimización que resue
 
 ## Introducción
 
-El problema del flow shop permutacional consiste en programar una serie de trabajos en múltiples máquinas, donde el orden de los trabajos es el mismo en todas las máquinas. El objetivo es minimizar el tiempo total de completado (makespan) o la suma de los tiempos de finalización.
+El problema del flow shop permutacional consiste en programar una serie de trabajos en múltiples máquinas, donde el orden de los trabajos es el mismo en todas las máquinas. Aquí se puede minimizar Cmáx (finalización de la última orden) o Fmáx (finalización media de las órdenes).
 
 ## Algoritmos implementados
 
 - Búsqueda aleatoria
 - Búsqueda local
 - Recocido simulado
+- Algoritmo genético (selección, cruces OX/PMX/CX, mutación y reemplazo configurables)
 
 ## Ejecución
 

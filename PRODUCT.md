@@ -16,7 +16,7 @@ Students working on the production programming exercise in Gestión y Organizaci
 
 ## Product Purpose
 
-Load a flow shop permutation instance, choose or generate an order sequence, calculate its completion-time matrix and performance measures, and optionally improve the sequence with local search.
+Load a flow shop permutation instance, choose or generate an order sequence, calculate its completion-time matrix and performance measures, and optionally improve the sequence with local search, random search, simulated annealing, or a genetic algorithm.
 
 ## Operating Context
 

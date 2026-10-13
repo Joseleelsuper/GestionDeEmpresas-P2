@@ -13,6 +13,7 @@
 - [sequence.py](../src/backend/sequence.py) validates a complete permutation or generates one when the input is empty. Preserve this convention when changing parsing or UI sequence controls.
 - [local_search.py](../src/backend/local_search.py) owns local-search strategies (`best`, `first`, `random`), moves (`swap`, `2opt`), and bounded neighbor evaluation. `max_neighbors=0` means the full neighborhood; prefix cutoffs skip candidates that cannot improve the objective.
 - [metaheuristics.py](../src/backend/metaheuristics.py) implements random search and simulated annealing. Optional annealing refinement is dispatched in `solve.py` through local search.
+- [genetic_algorithm.py](../src/backend/genetic_algorithm.py) implements permutation-safe OX/PMX/CX crossover, swap/insert/invert mutation, four parent selection modes, and generational/steady replacement. `SearchOptions.genetic` carries its bounded settings.
 - Search results feed the history UI in `index.js`: preserve `method`, `objective`, `initial_metrics`, `final_metrics`, `iterations`, `max_iterations`, `evaluations`, `evaluation_label`, and `stop_reason`; method-specific settings and refinement details are also displayed.
 
 ## API and UI contracts

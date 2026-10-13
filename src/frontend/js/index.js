@@ -8,6 +8,27 @@ const neighborhoodFields = document.querySelector("#neighborhood-fields");
 const randomSearchFields = document.querySelector("#random-search-fields");
 const annealingFields = document.querySelector("#annealing-fields");
 const localSearchFields = document.querySelector("#local-search-fields");
+const geneticFields = document.querySelector("#genetic-fields");
+const gaTournamentFields = document.querySelector("#ga-tournament-fields");
+const gaTruncationFields = document.querySelector("#ga-truncation-fields");
+const gaEliteFields = document.querySelector("#ga-elite-fields");
+const gaEstimate = document.querySelector("#ga-estimate");
+const gaInputs = {
+  populationSize: document.querySelector("#ga-population-size"),
+  generations: document.querySelector("#ga-generations"),
+  selection: document.querySelector("#ga-selection"),
+  tournamentSize: document.querySelector("#ga-tournament-size"),
+  truncationFraction: document.querySelector("#ga-truncation-fraction"),
+  crossover: document.querySelector("#ga-crossover"),
+  crossoverProbability: document.querySelector("#ga-crossover-probability"),
+  mutation: document.querySelector("#ga-mutation"),
+  mutationProbability: document.querySelector("#ga-mutation-probability"),
+  replacement: document.querySelector("#ga-replacement"),
+  eliteCount: document.querySelector("#ga-elite-count"),
+  stagnationGenerations: document.querySelector("#ga-stagnation-generations"),
+  timeLimitSeconds: document.querySelector("#ga-time-limit-seconds"),
+  targetValue: document.querySelector("#ga-target-value"),
+};
 const randomIterationsInput = document.querySelector("#random-iterations");
 const initialTemperatureInput = document.querySelector("#initial-temperature");
 const coolingRateInput = document.querySelector("#cooling-rate");
@@ -37,6 +58,7 @@ const searchLabels = {
     local_search: "Búsqueda local",
     random_search: "Búsqueda aleatoria",
     simulated_annealing: "Recocido simulado",
+    genetic_algorithm: "Algoritmo genético",
   },
   objective: { cmax: "Cmáx", fmax: "Fmáx" },
   strategy: {
@@ -45,6 +67,10 @@ const searchLabels = {
     random: "Aleatorio entre mejoras evaluadas",
   },
   neighborhood: { swap: "Intercambio", "2opt": "Inversión 2-opt" },
+  selection: { tournament: "Torneo", roulette: "Ruleta por rango", average: "Por media", truncation: "Truncamiento" },
+  crossover: { ox: "OX", pmx: "PMX", cx: "CX" },
+  mutation: { swap: "Intercambio", insert: "Inserción", invert: "Inversión" },
+  replacement: { generational: "Generacional", steady: "Estacionario" },
   stopReason: {
     local_optimum: "Óptimo local confirmado",
     sample_no_improvement: "Sin mejoras en la muestra",
@@ -52,6 +78,10 @@ const searchLabels = {
     iterations_complete: "Muestra aleatoria completada",
     final_temperature: "Temperatura final alcanzada",
     empty_neighborhood: "No hay movimientos posibles",
+    max_generations: "Máximo de generaciones",
+    stagnation: "Sin mejora durante el límite indicado",
+    time_limit: "Límite de tiempo",
+    target_reached: "Objetivo conocido alcanzado",
   },
 };
 
@@ -59,6 +89,7 @@ const methodHelp = {
   local_search: "Mejora la secuencia indicada (o una aleatoria) mediante movimientos locales.",
   random_search: "Prueba permutaciones aleatorias y conserva la mejor encontrada; parte de la secuencia indicada si la hay.",
   simulated_annealing: "Explora vecinos y puede aceptar empeoramientos según la temperatura; devuelve la mejor solución visitada.",
+  genetic_algorithm: "Evoluciona una población de permutaciones y conserva la mejor secuencia encontrada.",
 };
 
 function setSearchGroup(group, visible) {
@@ -103,17 +134,41 @@ function updateAnnealingEstimate() {
   }
 }
 
+function updateGeneticEstimate() {
+  const size = Number(gaInputs.populationSize.value);
+  const generations = Number(gaInputs.generations.value);
+  const elite = gaInputs.replacement.value === "generational" ? Number(gaInputs.eliteCount.value) : 0;
+  if (!Number.isInteger(size) || size < 2 || size > 200 || !Number.isInteger(generations) || generations < 1 || generations > 1000) {
+    gaEstimate.textContent = "Indica entre 2 y 200 individuos y entre 1 y 1000 generaciones.";
+    return;
+  }
+  if (!Number.isInteger(elite) || elite < 0 || elite >= size) {
+    gaEstimate.textContent = "La élite debe ser menor que la población.";
+    return;
+  }
+  const evaluations = size + (size - elite) * generations;
+  gaEstimate.textContent = evaluations <= 10000
+    ? `${numberFormat.format(evaluations)} candidatos como máximo; las soluciones repetidas se evalúan una vez. Las instancias grandes tienen un límite adicional.`
+    : "La combinación supera el máximo de 10.000 candidatos.";
+}
+
 function updateSearchControls() {
   const method = searchAlgorithmInput.value;
   const isLocal = method === "local_search";
   const isRandom = method === "random_search";
   const isAnnealing = method === "simulated_annealing";
+  const isGenetic = method === "genetic_algorithm";
   setSearchGroup(neighborhoodFields, isLocal || isAnnealing);
   setSearchGroup(randomSearchFields, isRandom);
   setSearchGroup(annealingFields, isAnnealing);
   setSearchGroup(localSearchFields, isLocal || (isAnnealing && refineWithLocalSearchInput.checked));
+  setSearchGroup(geneticFields, isGenetic);
+  setSearchGroup(gaTournamentFields, isGenetic && gaInputs.selection.value === "tournament");
+  setSearchGroup(gaTruncationFields, isGenetic && gaInputs.selection.value === "truncation");
+  setSearchGroup(gaEliteFields, isGenetic && gaInputs.replacement.value === "generational");
   searchMethodHelp.textContent = methodHelp[method];
   updateAnnealingEstimate();
+  updateGeneticEstimate();
 }
 
 async function loadExamples() {
@@ -213,6 +268,14 @@ function createHistoryCard(result) {
       `${numberFormat.format(search.temperature_levels)} temperaturas · T₀ ${numberFormat.format(search.initial_temperature)} · α ${numberFormat.format(search.cooling_rate)} · L ${search.iterations_per_temperature} · Tf ${numberFormat.format(search.final_temperature)}`,
     );
   }
+  if (method === "genetic_algorithm") {
+    contextParts.push(
+      `${search.population_size} individuos`,
+      searchLabels.selection[search.selection],
+      `${searchLabels.crossover[search.crossover]} · ${searchLabels.mutation[search.mutation]}`,
+      searchLabels.replacement[search.replacement],
+    );
+  }
   if (search.refinement) {
     contextParts.push(
       `refinamiento: ${searchLabels.strategy[search.refinement.strategy]} · ${numberFormat.format(search.refinement.iterations)} iteraciones · ${numberFormat.format(search.refinement.neighbors_evaluated)} vecinos`,
@@ -240,7 +303,7 @@ function createHistoryCard(result) {
   stats.className = "history-stats";
   const secondStat = method === "simulated_annealing"
     ? ["cycle", numberFormat.format(search.temperature_levels), "temperaturas"]
-    : ["cycle", `${search.iterations}/${search.max_iterations}`, "iteraciones"];
+    : ["cycle", `${search.iterations}/${search.max_iterations}`, method === "genetic_algorithm" ? "generaciones" : "iteraciones"];
   for (const [iconName, value, label] of [
     ["home", numberFormat.format(search.evaluations ?? search.neighbors_evaluated), search.evaluation_label ?? "vecinos"],
     secondStat,
@@ -278,7 +341,26 @@ function createHistoryCard(result) {
   sequenceText.textContent = result.sequence.join(", ");
   sequenceDetails.append(sequenceSummary, sequenceText);
 
-  card.append(heading, measures, stats, stop, sequenceDetails);
+  card.append(heading, measures, stats, stop);
+  if (method === "genetic_algorithm") {
+    const settings = document.createElement("details");
+    settings.className = "history-sequence history-config";
+    const summary = document.createElement("summary");
+    summary.textContent = "Ver parámetros";
+    const values = document.createElement("p");
+    values.textContent = [
+      `Población ${search.population_size} · máximo ${search.generations} generaciones`,
+      search.selection === "tournament" ? `Torneo de ${search.tournament_size}` : search.selection === "truncation" ? `Fracción ${numberFormat.format(search.truncation_fraction)}` : searchLabels.selection[search.selection],
+      `Cruce ${searchLabels.crossover[search.crossover]} · Pc ${numberFormat.format(search.crossover_probability)}`,
+      `Mutación ${searchLabels.mutation[search.mutation]} · Pm ${numberFormat.format(search.mutation_probability)}`,
+      `${searchLabels.replacement[search.replacement]}${search.replacement === "generational" ? ` · ${search.elite_count} élites` : ""}`,
+      `Sin mejora ${search.stagnation_generations || "desactivado"} · tiempo ${search.time_limit_seconds ? `${search.time_limit_seconds} s` : "desactivado"}`,
+      search.target_value === null ? "Sin objetivo conocido" : `Objetivo conocido ${numberFormat.format(search.target_value)}`,
+    ].join(" · ");
+    settings.append(summary, values);
+    card.append(settings);
+  }
+  card.append(sequenceDetails);
   return card;
 }
 
@@ -287,6 +369,19 @@ function readIntegerInput(input, minimum, maximum, errorMessage) {
   const value = Number(rawValue);
   if (!rawValue || !Number.isInteger(value) || value < minimum || value > maximum) {
     setStatus(errorMessage, true);
+    input.closest(".genetic-details")?.setAttribute("open", "");
+    input.focus();
+    return null;
+  }
+  return value;
+}
+
+function readRangeInput(input, minimum, maximum, errorMessage) {
+  const rawValue = input.value.trim();
+  const value = Number(rawValue);
+  if (!rawValue || !Number.isFinite(value) || value < minimum || value > maximum) {
+    setStatus(errorMessage, true);
+    input.closest(".genetic-details")?.setAttribute("open", "");
     input.focus();
     return null;
   }
@@ -315,6 +410,45 @@ function readLocalSearchParameters(data) {
   if (neighbors === null) return false;
   data.set("max_iterations", String(iterations));
   data.set("max_neighbors", String(neighbors));
+  return true;
+}
+
+function readGeneticParameters(data) {
+  const size = readIntegerInput(gaInputs.populationSize, 2, 200, "La población debe tener entre 2 y 200 individuos.");
+  if (size === null) return false;
+  const generations = readIntegerInput(gaInputs.generations, 1, 1000, "Las generaciones deben estar entre 1 y 1000.");
+  if (generations === null) return false;
+  const elite = gaInputs.replacement.value === "generational"
+    ? readIntegerInput(gaInputs.eliteCount, 0, size - 1, "La élite debe ser menor que la población y no negativa.")
+    : 0;
+  if (elite === null) return false;
+  if (size + (size - elite) * generations > 10000) {
+    setStatus("La población y las generaciones superan 10.000 candidatos; reduce uno de los valores.", true);
+    gaInputs.generations.closest(".genetic-details")?.setAttribute("open", "");
+    gaInputs.generations.focus();
+    return false;
+  }
+  if (gaInputs.selection.value === "tournament" && readIntegerInput(
+    gaInputs.tournamentSize, 2, size, "Los participantes del torneo deben estar entre 2 y el tamaño de la población.",
+  ) === null) return false;
+  if (gaInputs.selection.value === "truncation" && readRangeInput(
+    gaInputs.truncationFraction, 0.01, 1, "La fracción de truncamiento debe estar entre 0,01 y 1.",
+  ) === null) return false;
+  for (const [input, label] of [
+    [gaInputs.crossoverProbability, "La probabilidad de cruce"],
+    [gaInputs.mutationProbability, "La probabilidad de mutación"],
+  ]) {
+    if (readRangeInput(input, 0, 1, `${label} debe estar entre 0 y 1.`) === null) return false;
+  }
+  if (readIntegerInput(gaInputs.stagnationGenerations, 0, 1000, "Las generaciones sin mejora deben estar entre 0 y 1000.") === null) return false;
+  if (readRangeInput(gaInputs.timeLimitSeconds, 0, 60, "El límite de tiempo debe estar entre 0 y 60 segundos.") === null) return false;
+  if (gaInputs.targetValue.value.trim()) {
+    if (readRangeInput(gaInputs.targetValue, 0, Infinity, "El objetivo conocido debe ser un número no negativo.") === null) return false;
+  } else {
+    data.delete("ga_target_value");
+  }
+  data.set("ga_population_size", String(size));
+  data.set("ga_generations", String(generations));
   return true;
 }
 
@@ -368,6 +502,11 @@ clearSearchHistory.addEventListener("click", () => {
 
 searchAlgorithmInput.addEventListener("change", updateSearchControls);
 refineWithLocalSearchInput.addEventListener("change", updateSearchControls);
+gaInputs.selection.addEventListener("change", updateSearchControls);
+gaInputs.replacement.addEventListener("change", updateSearchControls);
+for (const input of [gaInputs.populationSize, gaInputs.generations, gaInputs.eliteCount]) {
+  input.addEventListener("input", updateGeneticEstimate);
+}
 for (const input of [initialTemperatureInput, coolingRateInput, iterationsPerTemperatureInput, finalTemperatureInput]) {
   input.addEventListener("input", updateAnnealingEstimate);
 }
@@ -381,6 +520,7 @@ for (const input of [
   coolingRateInput,
   iterationsPerTemperatureInput,
   finalTemperatureInput,
+  ...Object.values(gaInputs).filter((control) => control.tagName === "INPUT"),
 ]) {
   input.addEventListener("keydown", (event) => {
     if (event.key === "Enter") {
@@ -411,6 +551,7 @@ form.addEventListener("submit", async (event) => {
     if (iterations === null) return;
     data.set("random_iterations", String(iterations));
   }
+  if (algorithm === "genetic_algorithm" && !readGeneticParameters(data)) return;
   if (algorithm === "simulated_annealing") {
     const initialTemperature = readPositiveInput(
       initialTemperatureInput, "T₀ debe ser un número positivo y finito.",
@@ -457,6 +598,7 @@ form.addEventListener("submit", async (event) => {
     local_search: "Buscando una secuencia mejor…",
     random_search: "Evaluando permutaciones aleatorias…",
     simulated_annealing: "Ejecutando recocido simulado…",
+    genetic_algorithm: "Evolucionando la población…",
   };
   setStatus(progressMessages[algorithm]);
   try {

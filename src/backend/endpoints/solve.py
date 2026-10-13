@@ -1,11 +1,12 @@
 """Carga una instancia de entrada y prepara la respuesta del cálculo."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from fastapi import HTTPException, UploadFile
 
 from ..flowshop import calculate_flowshop
+from ..genetic_algorithm import GeneticOptions, genetic_algorithm
 from ..instance import MAX_FILE_BYTES, parse_instance
 from ..local_search import local_search
 from ..metaheuristics import random_search, simulated_annealing
@@ -28,6 +29,7 @@ class SearchOptions:
     iterations_per_temperature: int
     final_temperature: float
     refine_with_local_search: bool
+    genetic: GeneticOptions = field(default_factory=GeneticOptions)
 
 
 def _run_search(
@@ -48,9 +50,11 @@ def _run_search(
         return random_search(
             processing, order, options.objective, options.random_iterations
         )
+    if options.algorithm == "genetic_algorithm":
+        return genetic_algorithm(processing, order, options.objective, options.genetic)
     if options.algorithm != "simulated_annealing":
         raise ValueError(
-            "Elige cálculo directo, búsqueda local, aleatoria o recocido simulado."
+            "Elige cálculo directo, búsqueda local, aleatoria, recocido o algoritmo genético."
         )
 
     result, search = simulated_annealing(

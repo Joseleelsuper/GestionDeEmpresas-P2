@@ -203,6 +203,19 @@ input::placeholder {
   display: none;
 }
 
+.genetic-details {
+  padding: 0.65rem 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.genetic-details > summary {
+  font-size: 0.85rem;
+}
+
+.search-options[open] .genetic-details:not([open]) > summary {
+  margin-bottom: 0;
+}
+
 .search-refinement {
   display: flex;
   align-items: flex-start;
@@ -463,6 +476,12 @@ input::placeholder {
 
 .history-sequence p {
   max-height: 6rem;
+}
+
+.history-config p {
+  max-height: none;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 
 .metrics {

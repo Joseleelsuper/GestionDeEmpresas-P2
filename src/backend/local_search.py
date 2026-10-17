@@ -15,7 +15,18 @@ def _objective_value(
     objective: str,
     cutoff: float | None = None,
 ) -> float | None:
-    """Evalúa el objetivo y descarta prefijos que ya no pueden mejorarlo."""
+    """Evalúa un objetivo y corta el cálculo si un prefijo ya no puede mejorarlo.
+
+    Args:
+        processing (list[list[int]]): Duraciones por orden y máquina.
+        sequence (list[int]): Permutación de órdenes identificadas desde 1.
+        objective (str): Medida a calcular: ``cmax`` o ``fmax``.
+        cutoff (float | None): Umbral para descartar un prefijo; si es ``None``,
+            se completa la evaluación.
+
+    Returns:
+        float | None: Valor del objetivo o ``None`` si el prefijo alcanza el corte.
+    """
     machine_count = len(processing[0])
     previous = [0] * machine_count
     current = [0] * machine_count
@@ -43,7 +54,19 @@ def _objective_value(
 
 
 def _score(processing: list[list[int]], sequence: list[int], objective: str) -> float:
-    """Evalúa una solución completa, sin corte por prefijo."""
+    """Calcula el valor de una solución completa para el objetivo indicado.
+
+    Args:
+        processing (list[list[int]]): Duraciones por orden y máquina.
+        sequence (list[int]): Permutación completa de órdenes desde 1.
+        objective (str): Medida que se calcula: ``cmax`` o ``fmax``.
+
+    Returns:
+        float: Valor del objetivo para la permutación completa.
+
+    Raises:
+        RuntimeError: Si la evaluación completa se descarta inesperadamente.
+    """
     value = _objective_value(processing, sequence, objective)
     if value is None:
         raise RuntimeError("La evaluación completa no puede descartarse.")
@@ -51,12 +74,28 @@ def _score(processing: list[list[int]], sequence: list[int], objective: str) -> 
 
 
 def _pair_start(first: int, size: int) -> int:
-    """Índice del primer par que empieza en ``first`` en el orden lexicográfico."""
+    """Calcula el índice plano del primer par que empieza en una posición.
+
+    Args:
+        first (int): Primera posición del par.
+        size (int): Cantidad de posiciones de la permutación.
+
+    Returns:
+        int: Índice lexicográfico plano del primer par con ese inicio.
+    """
     return first * (2 * size - first - 1) // 2
 
 
 def _pair_at(index: int, size: int) -> tuple[int, int]:
-    """Convierte un índice plano en una pareja de posiciones ``(i, j)``."""
+    """Convierte el índice plano de un par en sus dos posiciones.
+
+    Args:
+        index (int): Índice del par en el orden lexicográfico.
+        size (int): Cantidad de posiciones de la permutación.
+
+    Returns:
+        tuple[int, int]: Posiciones del par ``(i, j)`` con ``i < j``.
+    """
     low, high = 0, size - 1
     while low + 1 < high:
         middle = (low + high) // 2
@@ -68,7 +107,15 @@ def _pair_at(index: int, size: int) -> tuple[int, int]:
 
 
 def _neighbor_pairs(size: int, max_neighbors: int) -> Iterator[tuple[int, int]]:
-    """Recorre todos los pares o una muestra uniforme de posiciones."""
+    """Genera todos los pares de posiciones o una muestra uniforme de ellos.
+
+    Args:
+        size (int): Cantidad de posiciones de la permutación.
+        max_neighbors (int): Cantidad máxima de pares; 0 solicita todos.
+
+    Returns:
+        Iterator[tuple[int, int]]: Pares de índices ``(i, j)`` con ``i < j``.
+    """
     total = size * (size - 1) // 2
     if max_neighbors == 0 or max_neighbors >= total:
         for first in range(size - 1):
@@ -81,7 +128,18 @@ def _neighbor_pairs(size: int, max_neighbors: int) -> Iterator[tuple[int, int]]:
 
 
 def _move(sequence: list[int], first: int, second: int, neighborhood: str) -> None:
-    """Aplica o revierte un intercambio o una inversión sobre la misma secuencia."""
+    """Aplica en el sitio un intercambio o una inversión entre dos posiciones.
+
+    Args:
+        sequence (list[int]): Secuencia que se modificará.
+        first (int): Índice inicial del movimiento.
+        second (int): Índice final del movimiento.
+        neighborhood (str): ``swap`` intercambia extremos; ``2opt`` invierte
+            el segmento inclusivo entre ambos índices.
+
+    Returns:
+        None: La secuencia recibida se modifica directamente.
+    """
     if neighborhood == "swap":
         sequence[first], sequence[second] = sequence[second], sequence[first]
     else:
@@ -94,7 +152,17 @@ def _should_select(
     selected_value: float,
     improving_neighbors: int,
 ) -> bool:
-    """Decide si la mejora sustituye a la seleccionada hasta ahora."""
+    """Decide si una mejora pasa a ser la vecina seleccionada.
+
+    Args:
+        strategy (str): Criterio ``first``, ``best`` o selección aleatoria.
+        candidate_value (float): Valor de la nueva secuencia.
+        selected_value (float): Valor de la mejor vecina seleccionada hasta ahora.
+        improving_neighbors (int): Número de mejoras vistas, para el muestreo aleatorio.
+
+    Returns:
+        bool: ``True`` si debe conservarse la nueva secuencia.
+    """
     if strategy == "first":
         return True
     if strategy == "best":
@@ -111,7 +179,21 @@ def _select_neighbor(
     neighborhood: str,
     max_neighbors: int,
 ) -> tuple[list[int] | None, float, int]:
-    """Selecciona una mejora y cuenta las evaluaciones del vecindario."""
+    """Explora vecinos, conserva una mejora según la estrategia y cuenta evaluaciones.
+
+    Args:
+        processing (list[list[int]]): Duraciones por orden y máquina.
+        current (list[int]): Permutación que se está explorando.
+        current_value (float): Valor del objetivo de la permutación actual.
+        objective (str): Medida a minimizar: ``cmax`` o ``fmax``.
+        strategy (str): Criterio de selección: ``best``, ``first`` o ``random``.
+        neighborhood (str): Movimiento ``swap`` o inversión ``2opt``.
+        max_neighbors (int): Vecinos a evaluar; 0 recorre el vecindario completo.
+
+    Returns:
+        tuple[list[int] | None, float, int]: Vecina elegida o ``None``, su valor
+            y el número de vecinos evaluados.
+    """
     selected_sequence = None
     selected_value = current_value
     improving_neighbors = 0

@@ -49,7 +49,20 @@ def _genetic_operators(
     ga_mutation: str = Form(default="swap"),
     ga_mutation_probability: float = Form(default=0.1),
 ) -> GeneticOptions:
-    """Lee los operadores del algoritmo genético desde el formulario."""
+    """Construye las opciones de selección, cruce y mutación del algoritmo genético.
+
+    Args:
+        ga_selection (str): Método de selección de padres.
+        ga_tournament_size (int): Individuos participantes en cada torneo.
+        ga_truncation_fraction (float): Fracción de la población apta para truncamiento.
+        ga_crossover (str): Operador de cruce de permutaciones.
+        ga_crossover_probability (float): Probabilidad de aplicar el cruce.
+        ga_mutation (str): Operador de mutación de permutaciones.
+        ga_mutation_probability (float): Probabilidad de mutar cada hijo.
+
+    Returns:
+        GeneticOptions: Opciones genéticas creadas con los campos del formulario.
+    """
     return GeneticOptions(
         selection=ga_selection,
         tournament_size=ga_tournament_size,
@@ -71,7 +84,21 @@ def _genetic_options(
     ga_time_limit_seconds: float = Form(default=10),
     ga_target_value: float | None = Form(default=None),
 ) -> GeneticOptions:
-    """Completa las opciones genéticas con población, reemplazo y parada."""
+    """Completa las opciones genéticas con tamaño, reemplazo y criterios de parada.
+
+    Args:
+        operators (GeneticOptions): Operadores y método de selección ya recibidos.
+        ga_population_size (int): Número de individuos de la población.
+        ga_generations (int): Máximo de generaciones.
+        ga_replacement (str): Estrategia generacional o estacionaria.
+        ga_elite_count (int): Individuos conservados en el reemplazo generacional.
+        ga_stagnation_generations (int): Generaciones sin mejora antes de parar.
+        ga_time_limit_seconds (float): Límite de tiempo de ejecución en segundos.
+        ga_target_value (float | None): Valor objetivo opcional para detener la búsqueda.
+
+    Returns:
+        GeneticOptions: Copia de las opciones con todos los campos del formulario.
+    """
     return replace(
         operators,
         population_size=ga_population_size,
@@ -99,7 +126,26 @@ def _search_options(
     final_temperature: float = Form(default=1),
     refine_with_local_search: bool = Form(default=False),
 ) -> SearchOptions:
-    """Agrupa los parámetros de búsqueda recibidos como campos del formulario."""
+    """Agrupa los campos del formulario en las opciones del algoritmo seleccionado.
+
+    Args:
+        genetic (GeneticOptions): Configuración del algoritmo genético.
+        algorithm (str): Algoritmo de cálculo o búsqueda que se ejecutará.
+        objective (str): Medida que se minimizará: ``cmax`` o ``fmax``.
+        strategy (str): Estrategia de selección de vecinos para búsqueda local.
+        neighborhood (str): Movimiento de vecinos: ``swap`` o ``2opt``.
+        max_iterations (int): Máximo de iteraciones de búsqueda local.
+        max_neighbors (int): Vecinos evaluados por iteración; 0 indica todos.
+        random_iterations (int): Número de permutaciones de búsqueda aleatoria.
+        initial_temperature (float): Temperatura inicial del recocido simulado.
+        cooling_rate (float): Factor de enfriamiento entre temperaturas.
+        iterations_per_temperature (int): Propuestas evaluadas por temperatura.
+        final_temperature (float): Temperatura a la que termina el recocido.
+        refine_with_local_search (bool): Si se refina el resultado del recocido.
+
+    Returns:
+        SearchOptions: Opciones completas para despachar la operación solicitada.
+    """
     return SearchOptions(
         algorithm=algorithm,
         objective=objective,

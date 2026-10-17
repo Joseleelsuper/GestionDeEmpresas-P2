@@ -17,6 +17,7 @@ REFERENCE_EXAMPLES = (
 
 class FlowShopTests(unittest.TestCase):
     def test_extracted_examples_are_available_and_parseable(self):
+        """Comprueba que los ejemplos integrados se listan y se pueden analizar."""
         example_files = sorted(EXAMPLES.glob("*.txt"))
         self.assertEqual(len(example_files), 13)
         self.assertEqual(set(list_examples()), {path.name for path in example_files})
@@ -25,6 +26,7 @@ class FlowShopTests(unittest.TestCase):
                 parse_instance(path.read_text(encoding="utf-8-sig"))
 
     def test_reference_examples_match_completion_matrices_and_metrics(self):
+        """Compara matrices de referencia y métricas de los ejemplos conocidos."""
         for filename, (sequence, expected_completion) in REFERENCE_EXAMPLES:
             with self.subTest(example=filename):
                 processing = parse_instance(
@@ -43,6 +45,7 @@ class FlowShopTests(unittest.TestCase):
                 )
 
     def test_first_class_example(self):
+        """Comprueba la matriz de finalización y las métricas del primer ejemplo de clase."""
         processing = parse_instance((EXAMPLES / "ejem_clase1.txt").read_text())
         result = calculate_flowshop(processing, [4, 2, 5, 1, 3])
         self.assertEqual([row["completion"] for row in result["rows"]], [[0, 6], [2, 13], [10, 17], [15, 20], [24, 25]])
@@ -50,11 +53,13 @@ class FlowShopTests(unittest.TestCase):
         self.assertEqual(result["fmax"], 16.2)
 
     def test_second_class_example(self):
+        """Comprueba el Cmáx esperado para el segundo ejemplo de clase."""
         processing = parse_instance((EXAMPLES / "ejem_clase2.txt").read_text())
         result = calculate_flowshop(processing, [1, 3, 4, 2, 5])
         self.assertEqual(result["cmax"], 41)
 
     def test_sequence_validation_and_random_order(self):
+        """Comprueba el análisis de secuencias explícitas y la generación aleatoria."""
         self.assertEqual(parse_sequence("4, 2 5,1,3", 5), [4, 2, 5, 1, 3])
         self.assertEqual(sorted(parse_sequence("", 5)), [1, 2, 3, 4, 5])
         for value in ("1 2 3 4 4", "1 2 3", "1 2 3 4 6", "a b c d e"):
@@ -62,6 +67,7 @@ class FlowShopTests(unittest.TestCase):
                 parse_sequence(value, 5)
 
     def test_invalid_instances_are_rejected(self):
+        """Comprueba que instancias con cabeceras u operaciones inválidas se rechazan."""
         for text in (
             "0 2",
             "2 2\n0 1 1 2",

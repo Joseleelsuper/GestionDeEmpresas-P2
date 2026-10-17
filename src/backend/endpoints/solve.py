@@ -35,7 +35,19 @@ class SearchOptions:
 def _run_search(
     processing: list[list[int]], order: list[int], options: SearchOptions
 ) -> tuple[dict, dict]:
-    """Despacha la búsqueda y aplica el refinamiento solicitado."""
+    """Ejecuta el algoritmo configurado y, si corresponde, refina su resultado.
+
+    Args:
+        processing (list[list[int]]): Duraciones por orden y máquina.
+        order (list[int]): Permutación inicial de órdenes identificadas desde 1.
+        options (SearchOptions): Algoritmo y parámetros recibidos por la API.
+
+    Returns:
+        tuple[dict, dict]: Resultado del cálculo y resumen del algoritmo ejecutado.
+
+    Raises:
+        ValueError: Si el algoritmo no existe o sus opciones no son válidas.
+    """
     if options.algorithm == "local_search":
         return local_search(
             processing,

@@ -17,10 +17,12 @@ from src.backend.metaheuristics import simulated_annealing
 class SearchTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        """Carga una instancia y una secuencia compartidas por las pruebas."""
         cls.processing = parse_instance((EXAMPLES / "ejem_clase1.txt").read_text())
         cls.sequence = [1, 2, 3, 4, 5]
 
     def test_full_local_search_stops_at_a_local_optimum(self):
+        """Comprueba que cada estrategia termina en un óptimo del vecindario completo."""
         original = calculate_flowshop(self.processing, self.sequence)["cmax"]
         for strategy in ("best", "first", "random"):
             for neighborhood in ("swap", "2opt"):
@@ -57,6 +59,7 @@ class SearchTests(unittest.TestCase):
                             )
 
     def test_annealing_keeps_best_solution_and_counts_proposals(self):
+        """Comprueba que el recocido devuelve su mejor visita y cuenta propuestas."""
         original = calculate_flowshop(self.processing, self.sequence)["cmax"]
         for neighborhood in ("swap", "2opt"):
             with self.subTest(neighborhood=neighborhood):
@@ -71,6 +74,7 @@ class SearchTests(unittest.TestCase):
                 self.assertEqual(search["final_value"], result["cmax"])
 
     def test_fmax_local_search_keeps_numeric_metrics(self):
+        """Comprueba que búsqueda local conserva métricas numéricas para Fmáx."""
         result, search = local_search(
             self.processing, self.sequence, "fmax", "best", "2opt", 10, 0
         )
@@ -79,6 +83,7 @@ class SearchTests(unittest.TestCase):
         self.assertEqual(round(search["final_value"], 2), result["fmax"])
 
     def test_annealing_handles_empty_neighborhood_and_rejects_large_schedule(self):
+        """Comprueba el vecindario vacío y el rechazo de un calendario excesivo."""
         result, search = simulated_annealing(
             [[4]], [1], initial_temperature=1, final_temperature=1
         )
@@ -93,6 +98,7 @@ class SearchTests(unittest.TestCase):
 
 class SolveTests(unittest.IsolatedAsyncioTestCase):
     async def test_search_options_preserve_dispatch_and_refinement(self):
+        """Comprueba el cálculo directo, el despacho y el refinamiento de búsqueda."""
         options = SearchOptions(
             "calculate", "cmax", "best", "swap", 10, 0, 5, 10, 0.5, 3, 1, False
         )

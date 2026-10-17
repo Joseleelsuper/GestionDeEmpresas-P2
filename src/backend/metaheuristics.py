@@ -11,10 +11,29 @@ MAX_ANNEALING_EVALUATIONS = 10_000
 
 
 def _metrics(result: dict) -> dict[str, int | float]:
+    """Extrae las dos métricas principales de un resultado de cálculo.
+
+    Args:
+        result (dict): Resultado de ``calculate_flowshop``.
+
+    Returns:
+        dict[str, int | float]: Valores ``cmax`` y ``fmax`` del resultado.
+    """
     return {"cmax": result["cmax"], "fmax": result["fmax"]}
 
 
 def _validate_objective(objective: str) -> None:
+    """Comprueba que se haya seleccionado una medida de optimización admitida.
+
+    Args:
+        objective (str): Medida que se minimizará: ``cmax`` o ``fmax``.
+
+    Returns:
+        None: Termina sin resultado si la medida es válida.
+
+    Raises:
+        ValueError: Si la medida no es ``cmax`` ni ``fmax``.
+    """
     if objective not in {"cmax", "fmax"}:
         raise ValueError("El objetivo debe ser Cmáx o Fmáx.")
 
@@ -25,7 +44,20 @@ def _temperature_levels(
     iterations_per_temperature: int,
     final_temperature: float,
 ) -> int:
-    """Valida el calendario y cuenta sus niveles sin superar el límite."""
+    """Valida el calendario térmico y cuenta sus niveles dentro del presupuesto.
+
+    Args:
+        initial_temperature (float): Temperatura inicial positiva y finita.
+        cooling_rate (float): Factor de enfriamiento estrictamente entre 0 y 1.
+        iterations_per_temperature (int): Propuestas por nivel de temperatura.
+        final_temperature (float): Temperatura positiva en la que se detiene el ciclo.
+
+    Returns:
+        int: Número de niveles que se explorarán antes de bajar del límite final.
+
+    Raises:
+        ValueError: Si el calendario no es válido o supera el máximo de evaluaciones.
+    """
     if not math.isfinite(initial_temperature) or initial_temperature <= 0:
         raise ValueError("La temperatura inicial debe ser un número positivo finito.")
     if not math.isfinite(final_temperature) or final_temperature <= 0:
@@ -63,7 +95,22 @@ def _anneal_schedule(
     temperature_levels: int,
     iterations_per_temperature: int,
 ) -> tuple[list[int], float]:
-    """Explora propuestas y conserva la mejor solución visitada."""
+    """Explora propuestas de recocido y conserva la mejor solución visitada.
+
+    Args:
+        processing (list[list[int]]): Duraciones por orden y máquina.
+        current (list[int]): Secuencia inicial para la exploración.
+        current_value (float): Valor inicial del objetivo.
+        objective (str): Medida que se minimiza: ``cmax`` o ``fmax``.
+        neighborhood (str): Movimiento ``swap`` o inversión ``2opt``.
+        initial_temperature (float): Temperatura del primer nivel.
+        cooling_rate (float): Factor multiplicativo de enfriamiento.
+        temperature_levels (int): Niveles de temperatura que se recorren.
+        iterations_per_temperature (int): Propuestas evaluadas en cada nivel.
+
+    Returns:
+        tuple[list[int], float]: Mejor secuencia visitada y valor de su objetivo.
+    """
     best_sequence = current.copy()
     best_value = current_value
     temperature = initial_temperature
@@ -90,7 +137,20 @@ def random_search(
     objective: str = "cmax",
     iterations: int = 1000,
 ) -> tuple[dict, dict]:
-    """Muestrea permutaciones aleatorias y conserva la mejor encontrada."""
+    """Muestrea permutaciones aleatorias y devuelve la mejor solución encontrada.
+
+    Args:
+        processing (list[list[int]]): Duraciones por orden y máquina.
+        sequence (list[int]): Permutación inicial completa, con identificadores desde 1.
+        objective (str): Medida a minimizar: ``cmax`` o ``fmax``.
+        iterations (int): Cantidad de permutaciones aleatorias que se evaluarán.
+
+    Returns:
+        tuple[dict, dict]: Resultado de la mejor secuencia y resumen de búsqueda.
+
+    Raises:
+        ValueError: Si el objetivo no es válido o las iteraciones exceden sus límites.
+    """
     _validate_objective(objective)
     if not 1 <= iterations <= MAX_RANDOM_ITERATIONS:
         raise ValueError(
@@ -140,7 +200,24 @@ def simulated_annealing(
     iterations_per_temperature: int = 50,
     final_temperature: float = 1,
 ) -> tuple[dict, dict]:
-    """Aplica recocido simulado y devuelve la mejor solución visitada."""
+    """Aplica recocido simulado y devuelve la mejor secuencia visitada.
+
+    Args:
+        processing (list[list[int]]): Duraciones por orden y máquina.
+        sequence (list[int]): Permutación inicial completa, con identificadores desde 1.
+        objective (str): Medida a minimizar: ``cmax`` o ``fmax``.
+        neighborhood (str): Movimiento ``swap`` o inversión ``2opt``.
+        initial_temperature (float): Temperatura inicial del calendario.
+        cooling_rate (float): Factor multiplicativo de enfriamiento, entre 0 y 1.
+        iterations_per_temperature (int): Propuestas evaluadas por cada temperatura.
+        final_temperature (float): Temperatura final del calendario.
+
+    Returns:
+        tuple[dict, dict]: Resultado de la mejor secuencia y resumen de búsqueda.
+
+    Raises:
+        ValueError: Si el objetivo, el movimiento o el calendario no son válidos.
+    """
     _validate_objective(objective)
     if neighborhood not in {"swap", "2opt"}:
         raise ValueError("El movimiento debe ser intercambio o inversión 2-opt.")

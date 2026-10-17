@@ -5,7 +5,17 @@ MAX_OPERATIONS = 10_000
 
 
 def _parse_header(fields: list[str]) -> tuple[int, int]:
-    """Lee el número de órdenes y máquinas de la cabecera."""
+    """Convierte los dos campos de la cabecera en órdenes y máquinas.
+
+    Args:
+        fields (list[str]): Tokens de la primera línea de la instancia.
+
+    Returns:
+        tuple[int, int]: Número de órdenes y número de máquinas.
+
+    Raises:
+        ValueError: Si la cabecera no contiene exactamente dos enteros.
+    """
     try:
         if len(fields) != 2:
             raise ValueError
@@ -21,7 +31,8 @@ def parse_instance(text: str) -> list[list[int]]:
     """Lee una instancia TXT y obtiene sus duraciones por orden y máquina.
 
     Args:
-        text (str): Cabecera ``n m`` y filas de pares ``máquina duración``.
+        text (str): Cabecera ``n m`` y filas de pares ``máquina duración``; admite
+            hasta ``MAX_FILE_BYTES`` bytes y ``MAX_OPERATIONS`` operaciones.
 
     Returns:
         list[list[int]]: Duraciones en el orden en que aparecen en el TXT.
